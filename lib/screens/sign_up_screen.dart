@@ -1,3 +1,6 @@
+import 'package:Demo/models/user.dart';
+import 'package:Demo/providers/user_provider.dart';
+import 'package:Demo/screens/dashboard_screen.dart';
 import 'package:Demo/screens/privacy_policy_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/screens/terms_and_condition_screen.dart';
@@ -145,23 +148,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CustomButton.button(
                     buttonText: "Create Account",
-                    buttonColor: MyColors.cAppThemeTealGreen,
+                    buttonColor: MyColors.primaryBlue,
                     borderRadius: 60,
-                    onTap: () {
+                    onTap: () async {
                       FocusScope.of(context).unfocus();
 
                       if (_formKey.currentState!.validate()) {
-                        debugPrint("Registered Successfully");
-                        Helper.customToast("Registered Successfully");
+                        final userProvider = context.read<UserProvider>();
+                        await userProvider.saveUser(
+                          AppUser(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            name:
+                                '${provider.firstNameController.text.trim()} ${provider.lastNameController.text.trim()}',
+                            email: provider.signUpEmailController.text.trim(),
+                          ),
+                        );
+
+                        Helper.customToast('Registered Successfully');
                         provider.clearSignUpFields(context: context);
 
-                        // Navigator.pushAndRemoveUntil(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => HowDoYouDiscoverUsScreen(),
-                        //   ),
-                        //   (route) => false,
-                        // );
+                        if (!context.mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DashboardScreen(),
+                          ),
+                          (route) => false,
+                        );
                       } else {
                         Scrollable.ensureVisible(
                           _formKey.currentContext!,

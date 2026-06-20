@@ -1,14 +1,15 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
+import 'package:Demo/screens/habit_creation_screen.dart';
+import 'package:Demo/screens/dashboard_home_screen.dart';
 import 'package:Demo/screens/profile_screen.dart';
 import 'package:Demo/screens/progress_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../custom_widgets/custom_font_family.dart';
+
 import '../providers/dashboard_provider.dart';
 import 'badges_and_rewards_screen.dart';
-import 'home_screen.dart';
-import 'leaderboard_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -18,85 +19,96 @@ class DashboardScreen extends StatelessWidget {
     final provider = Provider.of<DashboardProvider>(context);
 
     final List<Widget> screens = [
-      const HomeScreen(),
+      const DashboardHomeScreen(),
       const ProgressScreen(),
       const BadgesAndRewardsScreen(),
-      const LeaderboardScreen(),
       const ProfileScreen(),
     ];
 
     return Scaffold(
+      backgroundColor: MyColors.neutralGray,
       body: screens[provider.currentIndex],
+      floatingActionButton: provider.currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HabitCreationScreen(),
+                  ),
+                );
+              },
+              backgroundColor: MyColors.primaryBlue,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
+            )
+          : null,
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: MyColors.kWhiteColor,
-        selectedItemColor: MyColors.cAppThemeTealGreen,
-        unselectedItemColor: Colors.black45,
-        selectedLabelStyle: TextStyle(
-          fontFamily: FontFamily.sfProSemiBold,
-          color: MyColors.kAppThemeColor,
-          fontSize: 14,
+        selectedItemColor: MyColors.primaryBlue,
+        unselectedItemColor: MyColors.kDescriptionColor,
+        selectedLabelStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
         ),
-        unselectedLabelStyle: TextStyle(
-          fontSize: 14,
-          // color: MyColors.kMaroonColor,
-          color: Colors.red,
-          fontFamily: FontFamily.sfProMedium,
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
         ),
         currentIndex: provider.currentIndex,
         type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          provider.changeIndex(index);
-        },
+        onTap: provider.changeIndex,
         items: [
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               provider.currentIndex == 0
-                  ? "assets/icons/home_selected_icon.svg"
-                  : "assets/icons/home_unselected_icon.svg",
+                  ? 'assets/icons/home_selected_icon.svg'
+                  : 'assets/icons/home_unselected_icon.svg',
               height: 22,
-              color: provider.currentIndex == 0 ? MyColors.cAppThemeTealGreen : Colors.black45,
+              color: provider.currentIndex == 0
+                  ? MyColors.primaryBlue
+                  : MyColors.kDescriptionColor,
             ),
-            label: "Home",
+            label: 'Dashboard',
           ),
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               provider.currentIndex == 1
-                  ? "assets/icons/progress_selected_icon.svg"
-                  : "assets/icons/progress_unselected_icon.svg",
+                  ? 'assets/icons/progress_selected_icon.svg'
+                  : 'assets/icons/progress_unselected_icon.svg',
               height: 22,
-              color: provider.currentIndex == 1 ? MyColors.cAppThemeTealGreen : Colors.black45,
+              color: provider.currentIndex == 1
+                  ? MyColors.primaryBlue
+                  : MyColors.kDescriptionColor,
             ),
-            label: "Progress",
+            label: 'Progress',
           ),
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               provider.currentIndex == 2
-                  ? "assets/icons/badges_and_rewards_selected_icon.svg"
-                  : "assets/icons/badges_and_rewards_unselected_icon.svg",
+                  ? 'assets/icons/badges_and_rewards_selected_icon.svg'
+                  : 'assets/icons/badges_and_rewards_unselected_icon.svg',
               height: 22,
-              color: provider.currentIndex == 2 ? MyColors.cAppThemeTealGreen : Colors.black45,
+              color: provider.currentIndex == 2
+                  ? MyColors.primaryBlue
+                  : MyColors.kDescriptionColor,
             ),
-            label: "Badges", // No text for center
+            label: 'Rewards',
           ),
           BottomNavigationBarItem(
             icon: SvgPicture.asset(
               provider.currentIndex == 3
-                  ? "assets/icons/leaderboard_selected_icon.svg"
-                  : "assets/icons/leaderboard_unselected_icon.svg",
+                  ? 'assets/icons/profile_selected_icon.svg'
+                  : 'assets/icons/profile_unselected_icon.svg',
               height: 22,
-              color: provider.currentIndex == 3 ? null : Colors.black45,
+              color: provider.currentIndex == 3
+                  ? MyColors.primaryBlue
+                  : MyColors.kDescriptionColor,
             ),
-            label: "Leaderboard",
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              provider.currentIndex == 4
-                  ? "assets/icons/profile_selected_icon.svg"
-                  : "assets/icons/profile_unselected_icon.svg",
-              height: 22,
-              color: provider.currentIndex == 4 ? MyColors.cAppThemeTealGreen : Colors.black45,
-            ),
-            label: "Profile",
+            label: 'Profile',
           ),
         ],
       ),

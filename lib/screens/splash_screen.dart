@@ -1,10 +1,11 @@
-import 'package:Demo/custom_widgets/custom_font_family.dart';
+import 'package:Demo/custom_widgets/custom_colors.dart';
+import 'package:Demo/providers/habits_provider.dart';
+import 'package:Demo/providers/progress_provider.dart';
+import 'package:Demo/providers/splash_provider.dart';
+import 'package:Demo/providers/user_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../custom_widgets/custom_colors.dart';
-import '../custom_widgets/custom_scaffold.dart';
-import '../providers/splash_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,35 +22,38 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _init() async {
-    final splashProvider = Provider.of<SplashProvider>(context, listen: false);
+    final habitsProvider = context.read<HabitsProvider>();
+    final userProvider = context.read<UserProvider>();
+    final progressProvider = context.read<ProgressProvider>();
+    final splashProvider = context.read<SplashProvider>();
 
+    await habitsProvider.loadFromStorage();
+    await userProvider.loadFromStorage();
+    await progressProvider.loadFromStorage();
+
+    if (habitsProvider.totalCount > 0) {
+      await progressProvider.seedSampleWeek(
+        totalHabits: habitsProvider.totalCount,
+      );
+      await progressProvider.recordDay(
+        date: DateTime.now(),
+        completedCount: habitsProvider.completedCount,
+        totalCount: habitsProvider.totalCount,
+      );
+    }
+
+    if (!mounted) return;
     splashProvider.navigateToNextScreen(context);
-
-    /// FCM Token
-    // String? token = await FirebaseMessaging.instance.getToken();
-    // StorageManager.savingData(
-    //   StorageManager.fcmToken,
-    //   token.toString(),
-    // );
-    // debugPrint('fcm token is>> ${token.toString()}');
-    // debugPrint("🔥 FCM TOKEN: $token");
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: MyColors.kAppThemeColor,
-      // body:
-      // Image.asset(
-      //   "assets/images/Sequence 03_2 2.gif",
-      //   height: double.infinity,
-      //   width: double.infinity,
-      // ),
       body: Stack(
         alignment: Alignment.center,
         children: [
           Image.asset(
-            "assets/images/splash_screen_bg_img.png",
+            'assets/images/splash_screen_bg_img.png',
             fit: BoxFit.cover,
             height: double.infinity,
             width: double.infinity,
@@ -58,24 +62,31 @@ class _SplashScreenState extends State<SplashScreen> {
             left: 55,
             right: 55,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset("assets/images/app_logo_img.png"),
+                Image.asset('assets/images/app_logo_img.png'),
+                const SizedBox(height: 12),
                 Text(
-                  "Habit Tracker",
-                  style: TextStyle(
-                    color: MyColors.darkNavyBlue,
-                    fontFamily: FontFamily.sfProBold,
-                    fontSize: 20,
+                  'Habit Hero',
+                  style: GoogleFonts.poppins(
+                    color: MyColors.primaryBlue,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 28,
                   ),
                 ),
-                SizedBox(height: 15),
+                const SizedBox(height: 8),
                 Text(
-                  "Track. Improve. Transform",
-                  style: TextStyle(
-                    color: MyColors.darkNavyBlue,
-                    fontFamily: FontFamily.sfProMedium,
-                    fontSize: 17,
+                  'Track. Improve. Transform',
+                  style: GoogleFonts.poppins(
+                    color: MyColors.kBlackColor,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
                   ),
+                ),
+                const SizedBox(height: 40),
+                const CircularProgressIndicator(
+                  color: MyColors.primaryBlue,
+                  strokeWidth: 2.5,
                 ),
               ],
             ),

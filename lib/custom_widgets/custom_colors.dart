@@ -32,4 +32,9 @@ class MyColors {
   static const Color cAppThemeTealGreen = Color(0XFF39D0A1);
   static const Color softMint = Color(0XFF6BE3B7);
   static const Color lightGrey = Color(0XFFE8EAF1);
+
+  /// Habit Hero palette
+  static const Color primaryBlue = Color(0xFF3B82F6);
+  static const Color accentYellow = Color(0xFFFACC15);
+  static const Color neutralGray = Color(0xFFF3F4F6);
 }

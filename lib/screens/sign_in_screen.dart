@@ -1,4 +1,6 @@
 import 'package:Demo/providers/login_provider.dart';
+import 'package:Demo/providers/user_provider.dart';
+import 'package:Demo/models/user.dart';
 import 'package:Demo/screens/sign_up_screen.dart';
 import 'package:dotted_line/dotted_line.dart';
 import 'package:flutter/gestures.dart';
@@ -10,7 +12,6 @@ import '../custom_widgets/custom_colors.dart';
 import '../custom_widgets/custom_font_family.dart';
 import '../custom_widgets/custom_scaffold.dart';
 import '../custom_widgets/custom_text_field.dart';
-import '../utility/helper.dart';
 import 'dashboard_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -116,22 +117,34 @@ class _SignInScreenState extends State<SignInScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CustomButton.button(
                     buttonText: "Continue",
-                    buttonColor: MyColors.cAppThemeTealGreen,
+                    buttonColor: MyColors.primaryBlue,
                     borderRadius: 60,
-                    onTap: () {
-                      // FocusScope.of(context).unfocus();
-                      //
-                      // if (_formKey.currentState!.validate()) {
-                      //   final email = provider.loginEmailController.text.trim();
-                      //   final password =
-                      //   provider.passwordController.text.trim();
-                      //
-                      //   debugPrint("Email: $email");
-                      //   debugPrint("Password: $password");
-                      //   Helper.customToast("Login Successfully");
-                      //   provider.clearFields();
-                      // }
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => DashboardScreen(),));
+                    onTap: () async {
+                      FocusScope.of(context).unfocus();
+
+                      if (_formKey.currentState!.validate()) {
+                        final email =
+                            provider.loginEmailController.text.trim();
+                        final userProvider = context.read<UserProvider>();
+
+                        await userProvider.saveUser(
+                          AppUser(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            name: email.split('@').first,
+                            email: email,
+                          ),
+                        );
+
+                        provider.clearFields();
+
+                        if (!context.mounted) return;
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DashboardScreen(),
+                          ),
+                        );
+                      }
                     },
                     textStyle: TextStyle(
                       fontSize: 16,

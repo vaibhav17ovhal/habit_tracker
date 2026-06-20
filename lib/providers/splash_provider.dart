@@ -1,33 +1,43 @@
+import 'package:Demo/screens/dashboard_screen.dart';
+import 'package:Demo/screens/onboarding_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
+import 'package:Demo/services/hive_service.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-class SplashProvider extends ChangeNotifier{
+class SplashProvider extends ChangeNotifier {
+  Future<void> navigateToNextScreen(BuildContext context) async {
+    await Future.delayed(const Duration(seconds: 2));
 
-  SharedPreferences? preference;
-  bool isLogin = false;
+    if (!context.mounted) return;
 
-  void stayLogin(BuildContext context) async {
-    preference = await SharedPreferences.getInstance();
-    isLogin = preference?.getBool("is_login") ?? false;
+    final onboardingComplete = HiveService.settings.get(
+      HiveService.keyOnboardingComplete,
+      defaultValue: false,
+    );
+    final isLogin = HiveService.settings.get(
+      HiveService.keyIsLogin,
+      defaultValue: false,
+    );
 
-    if(isLogin){
-      if(context.mounted){
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(),));
-      }
+    if (!onboardingComplete) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+      return;
     }
-    else{
-      if(context.mounted){
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SignInScreen(),));
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(),));
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen(),));
-      }
-    }
-  }
 
-  void navigateToNextScreen(BuildContext context){
-    Future.delayed(Duration(seconds: 7), (){
-      stayLogin(context);
-    });
+    if (isLogin) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+    );
   }
 }
