@@ -2,6 +2,7 @@ import 'package:Demo/screens/dashboard_screen.dart';
 import 'package:Demo/screens/onboarding_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/services/hive_service.dart';
+import 'package:Demo/services/token_storage.dart';
 import 'package:Demo/utils/app_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +21,7 @@ class SplashProvider extends ChangeNotifier {
       HiveService.keyOnboardingComplete,
       defaultValue: false,
     );
+    final hasToken = await TokenStorage.hasToken();
     final isLogin = HiveService.settings.get(
       HiveService.keyIsLogin,
       defaultValue: false,
@@ -33,7 +35,7 @@ class SplashProvider extends ChangeNotifier {
       return;
     }
 
-    if (isLogin) {
+    if (hasToken && isLogin) {
       Navigator.pushReplacement(
         context,
         AppPageRoute(page: const DashboardScreen()),

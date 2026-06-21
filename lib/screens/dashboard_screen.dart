@@ -10,16 +10,30 @@ import 'package:provider/provider.dart';
 
 import '../providers/dashboard_provider.dart';
 import 'badges_and_rewards_screen.dart';
+import '../providers/habits_provider.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
   static const _screens = [
     DashboardHomeScreen(),
     ProgressScreen(),
     BadgesAndRewardsScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HabitsProvider>().fetchFromApi();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

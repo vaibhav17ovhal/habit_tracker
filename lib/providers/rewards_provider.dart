@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../models/reward.dart';
-import 'habits_provider.dart';
+import 'package:Demo/models/reward.dart';
+import 'package:Demo/providers/habits_provider.dart';
 
 class RewardsProvider extends ChangeNotifier {
-  List<RewardBadge> badgesFor(HabitsProvider habitsProvider) {
+  List<RewardBadge> goodHabitBadgesFor(HabitsProvider habitsProvider) {
     final maxStreak = habitsProvider.maxStreak;
 
     return [
@@ -34,6 +34,42 @@ class RewardsProvider extends ChangeNotifier {
       ),
     ];
   }
+
+  List<RewardBadge> badHabitBadgesFor(HabitsProvider habitsProvider) {
+    final days = habitsProvider.maxBadHabitDaysOnTarget;
+
+    return [
+      RewardBadge(
+        id: 'bad_1_day',
+        title: '1 Day On Target',
+        description: 'Stay at or below your goal for one day',
+        emoji: '🚭',
+        requiredStreak: 1,
+        isUnlocked: days >= 1,
+      ),
+      RewardBadge(
+        id: 'bad_1_week',
+        title: '1 Week On Target',
+        description: 'Seven consecutive days meeting your goal',
+        emoji: '🌟',
+        requiredStreak: 7,
+        isUnlocked: days >= 7,
+      ),
+      RewardBadge(
+        id: 'bad_1_month',
+        title: '1 Month On Target',
+        description: 'Thirty consecutive days meeting your goal',
+        emoji: '🏆',
+        requiredStreak: 30,
+        isUnlocked: days >= 30,
+      ),
+    ];
+  }
+
+  List<RewardBadge> badgesFor(HabitsProvider habitsProvider) => [
+        ...goodHabitBadgesFor(habitsProvider),
+        ...badHabitBadgesFor(habitsProvider),
+      ];
 
   int unlockedCount(HabitsProvider habitsProvider) =>
       badgesFor(habitsProvider).where((b) => b.isUnlocked).length;

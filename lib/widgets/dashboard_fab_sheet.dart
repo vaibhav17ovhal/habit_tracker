@@ -1,7 +1,8 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
 import 'package:Demo/models/mood.dart';
 import 'package:Demo/providers/mood_provider.dart';
-import 'package:Demo/screens/habit_creation_screen.dart';
+import 'package:Demo/screens/add_new_habit_screen.dart';
+import 'package:Demo/screens/break_bad_habit_screen.dart';
 import 'package:Demo/utils/app_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -258,12 +259,26 @@ class _DashboardFabSheet extends StatelessWidget {
                   icon: Icons.add_circle_outline_rounded,
                   iconColor: MyColors.primaryBlue,
                   title: 'Add New Habit',
-                  subtitle: 'Create a habit from templates',
+                  subtitle: 'Build positive daily routines',
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      AppPageRoute(page: const HabitCreationScreen()),
+                      AppPageRoute(page: const AddNewHabitScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                _FabOptionTile(
+                  icon: Icons.block_rounded,
+                  iconColor: const Color(0xFFEF4444),
+                  title: 'Break Bad Habit',
+                  subtitle: 'Track reduction and quit goals',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      AppPageRoute(page: const BreakBadHabitScreen()),
                     );
                   },
                 ),

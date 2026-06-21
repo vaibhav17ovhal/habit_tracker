@@ -3,6 +3,7 @@ import 'package:Demo/custom_widgets/custom_scaffold.dart';
 import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/mood_provider.dart';
 import 'package:Demo/providers/progress_provider.dart';
+import 'package:Demo/widgets/bad_habit_reduction_chart.dart';
 import 'package:Demo/widgets/streak_calendar.dart';
 import 'package:Demo/widgets/today_water_drop_card.dart';
 import 'package:Demo/widgets/weekly_bar_chart.dart';
@@ -23,6 +24,7 @@ class ProgressScreen extends StatelessWidget {
     final weekMoods = moodProvider.weeklyMoods();
     final completedDays = progressProvider.completedDaysInMonth();
     final monthlyRate = progressProvider.monthlyCompletionRate();
+    final badHabits = habitsProvider.badHabits;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return CustomScaffold(
@@ -47,6 +49,15 @@ class ProgressScreen extends StatelessWidget {
               monthlyRate: monthlyRate,
             ),
             const SizedBox(height: 16),
+            Text(
+              'Good Habits — Weekly Progress',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : MyColors.kDescriptionColor,
+              ),
+            ),
+            const SizedBox(height: 10),
             WeeklyBarChart(weekData: weekData),
             const SizedBox(height: 16),
             WeeklyMoodChart(weekMoods: weekMoods),
@@ -60,6 +71,27 @@ class ProgressScreen extends StatelessWidget {
               month: DateTime.now(),
               completedDays: completedDays,
             ),
+            if (badHabits.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Bad Habits — Reduction Trends',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : MyColors.kDescriptionColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...badHabits.map(
+                (habit) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: BadHabitReductionChart(
+                    habit: habit,
+                    weekData: habitsProvider.weeklyReductionData(habit),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
           ],
         ),

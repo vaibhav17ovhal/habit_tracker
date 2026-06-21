@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/user.dart';
+import '../services/api_service.dart';
 import '../services/hive_service.dart';
+import '../services/token_storage.dart';
 
 class UserProvider extends ChangeNotifier {
   AppUser? _user;
@@ -42,6 +44,20 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> saveFromApiUser(Map<String, dynamic> apiUser) async {
+    final user = AppUser(
+      id: apiUser['id']?.toString() ?? '',
+      name: apiUser['name'] as String? ?? 'Habit Hero',
+      email: apiUser['email'] as String? ?? '',
+    );
+    await saveUser(user);
+  }
+
+  Future<bool> hasValidSession() async {
+    return await TokenStorage.hasToken() &&
+        HiveService.settings.get(HiveService.keyIsLogin, defaultValue: false);
+  }
+
   Future<void> updateProfile({
     required String name,
     required String email,
@@ -78,12 +94,14 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     _user = null;
+    await ApiService.instance.logout();
     await HiveService.settings.put(HiveService.keyIsLogin, false);
     await HiveService.user.delete(HiveService.keyUser);
     notifyListeners();
   }
 
   Future<void> deleteAccount() async {
+    await ApiService.instance.logout();
     await HiveService.habits.delete(HiveService.keyHabits);
     await HiveService.progress.delete(HiveService.keyProgress);
     await HiveService.settings.delete(HiveService.keyMoods);

@@ -1,7 +1,8 @@
-import 'package:Demo/models/user.dart';
 import 'package:Demo/providers/dashboard_provider.dart';
+import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
 import 'package:Demo/screens/dashboard_screen.dart';
+import 'package:Demo/services/api_service.dart';
 import 'package:Demo/utils/app_page_route.dart';
 import 'package:Demo/screens/privacy_policy_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
@@ -31,6 +32,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final FocusNode emailFocusNode = FocusNode();
   final FocusNode passwordFocusNode = FocusNode();
   final FocusNode confirmPasswordFocusNode = FocusNode();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -149,22 +151,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CustomButton.button(
-                    buttonText: "Create Account",
+                    buttonText:
+                        _isLoading ? 'Creating account...' : 'Create Account',
                     buttonColor: MyColors.primaryBlue,
                     borderRadius: 60,
                     onTap: () async {
+                      if (_isLoading) return;
                       FocusScope.of(context).unfocus();
 
-                      if (_formKey.currentState!.validate()) {
-                        final userProvider = context.read<UserProvider>();
-                        await userProvider.saveUser(
-                          AppUser(
-                            id: DateTime.now().millisecondsSinceEpoch.toString(),
-                            name:
-                                '${provider.firstNameController.text.trim()} ${provider.lastNameController.text.trim()}',
-                            email: provider.signUpEmailController.text.trim(),
-                          ),
+                      if (!_formKey.currentState!.validate()) {
+                        Scrollable.ensureVisible(
+                          _formKey.currentContext!,
+                          duration: const Duration(milliseconds: 300),
                         );
+                        return;
+                      }
+
+                      setState(() => _isLoading = true);
+
+                      try {
+                        final userProvider = context.read<UserProvider>();
+                        final habitsProvider = context.read<HabitsProvider>();
+                        final name =
+                            '${provider.firstNameController.text.trim()} ${provider.lastNameController.text.trim()}';
+                        final email =
+                            provider.signUpEmailController.text.trim();
+                        final password =
+                            provider.signUpPasswordController.text.trim();
+
+                        final auth = await ApiService.instance.signup(
+                          email: email,
+                          password: password,
+                          name: name,
+                        );
+
+                        await userProvider.saveFromApiUser(auth.user);
+                        await habitsProvider.fetchFromApi();
 
                         Helper.customToast('Registered Successfully');
                         provider.clearSignUpFields(context: context);
@@ -176,11 +198,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           AppPageRoute(page: const DashboardScreen()),
                           (route) => false,
                         );
-                      } else {
-                        Scrollable.ensureVisible(
-                          _formKey.currentContext!,
-                          duration: Duration(milliseconds: 300),
-                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        showApiErrorSnackBar(context, e);
+                      } finally {
+                        if (mounted) setState(() => _isLoading = false);
                       }
                     },
                     textStyle: TextStyle(

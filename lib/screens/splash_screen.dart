@@ -31,11 +31,20 @@ class _SplashScreenState extends State<SplashScreen> {
     final bannerProvider = context.read<BannerQuoteProvider>();
     final splashProvider = context.read<SplashProvider>();
 
-    await habitsProvider.loadFromStorage();
     await userProvider.loadFromStorage();
     await progressProvider.loadFromStorage();
     await moodProvider.loadFromStorage();
     await bannerProvider.loadForCurrentSlot();
+
+    if (await userProvider.hasValidSession()) {
+      try {
+        await habitsProvider.fetchFromApi();
+      } catch (_) {
+        await habitsProvider.loadFromStorage();
+      }
+    } else {
+      await habitsProvider.loadFromStorage();
+    }
 
     if (habitsProvider.totalCount > 0) {
       await progressProvider.seedSampleWeek(

@@ -1,8 +1,9 @@
 import 'package:Demo/providers/dashboard_provider.dart';
+import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/login_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
-import 'package:Demo/models/user.dart';
 import 'package:Demo/screens/sign_up_screen.dart';
+import 'package:Demo/services/api_service.dart';
 import 'package:dotted_line/dotted_line.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final FocusNode emailFocusNode = FocusNode();
   final FocusNode passwordFocusNode = FocusNode();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -118,24 +120,32 @@ class _SignInScreenState extends State<SignInScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CustomButton.button(
-                    buttonText: "Continue",
+                    buttonText: _isLoading ? 'Signing in...' : 'Continue',
                     buttonColor: MyColors.primaryBlue,
                     borderRadius: 60,
                     onTap: () async {
+                      if (_isLoading) return;
                       FocusScope.of(context).unfocus();
 
-                      if (_formKey.currentState!.validate()) {
+                      if (!_formKey.currentState!.validate()) return;
+
+                      setState(() => _isLoading = true);
+
+                      try {
                         final email =
                             provider.loginEmailController.text.trim();
+                        final password =
+                            provider.passwordController.text.trim();
                         final userProvider = context.read<UserProvider>();
+                        final habitsProvider = context.read<HabitsProvider>();
 
-                        await userProvider.saveUser(
-                          AppUser(
-                            id: DateTime.now().millisecondsSinceEpoch.toString(),
-                            name: email.split('@').first,
-                            email: email,
-                          ),
+                        final auth = await ApiService.instance.login(
+                          email: email,
+                          password: password,
                         );
+
+                        await userProvider.saveFromApiUser(auth.user);
+                        await habitsProvider.fetchFromApi();
 
                         provider.clearFields();
                         context.read<DashboardProvider>().reset();
@@ -146,6 +156,11 @@ class _SignInScreenState extends State<SignInScreen> {
                           AppPageRoute(page: const DashboardScreen()),
                           (_) => false,
                         );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        showApiErrorSnackBar(context, e);
+                      } finally {
+                        if (mounted) setState(() => _isLoading = false);
                       }
                     },
                     textStyle: TextStyle(
