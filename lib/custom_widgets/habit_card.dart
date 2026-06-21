@@ -3,25 +3,32 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../models/habit.dart';
+import '../widgets/habit_card_menu.dart';
 import 'custom_colors.dart';
 
 class HabitCard extends StatelessWidget {
   final Habit habit;
   final ValueChanged<bool> onToggle;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const HabitCard({
     super.key,
     required this.habit,
     required this.onToggle,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: MyColors.kWhiteColor,
+        color: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: MyColors.neutralGray.withValues(alpha: 0.8)),
         boxShadow: [
@@ -57,7 +64,7 @@ class HabitCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: MyColors.kBlackColor,
+                    color: isDark ? Colors.white : MyColors.kBlackColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -82,6 +89,8 @@ class HabitCard extends StatelessWidget {
               ],
             ),
           ),
+          if (onEdit != null && onDelete != null)
+            HabitCardMenu(onEdit: onEdit!, onDelete: onDelete!),
           Transform.scale(
             scale: 1.1,
             child: Checkbox(

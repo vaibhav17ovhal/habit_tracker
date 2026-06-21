@@ -101,7 +101,12 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> deleteAccount() async {
-    await ApiService.instance.logout();
+    if (await TokenStorage.hasToken()) {
+      await ApiService.instance.deleteAccount();
+    } else {
+      await ApiService.instance.logout();
+    }
+
     await HiveService.habits.delete(HiveService.keyHabits);
     await HiveService.progress.delete(HiveService.keyProgress);
     await HiveService.settings.delete(HiveService.keyMoods);

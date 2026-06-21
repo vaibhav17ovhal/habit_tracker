@@ -81,6 +81,19 @@ class HabitsProvider extends ChangeNotifier {
     }
   }
 
+  Future<Habit?> getHabitById(String id) async {
+    if (!await TokenStorage.hasToken()) {
+      try {
+        return _habits.firstWhere((h) => h.id == id);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final raw = await _api.getHabitById(id);
+    return Habit.fromApiMap(raw);
+  }
+
   Future<void> addHabit(Habit habit) async {
     _isSyncing = true;
     notifyListeners();
@@ -108,6 +121,60 @@ class HabitsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateHabit(Habit updated) async {
+    final index = _habits.indexWhere((h) => h.id == updated.id);
+    if (index == -1) return;
+
+    final existing = _habits[index];
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      if (await TokenStorage.hasToken()) {
+        final raw = await _api.updateHabit(updated.id, updated.toApiMap());
+        var saved = Habit.fromApiMap(raw);
+        saved = saved.copyWith(
+          streak: existing.streak,
+          isCompletedToday: existing.isCompletedToday,
+          todayLoggedCount: existing.todayLoggedCount,
+          frequencyLogs: List<Map<String, dynamic>>.from(existing.frequencyLogs),
+          daysOnTarget: existing.daysOnTarget,
+        );
+        _syncTodayState(saved);
+        _habits[index] = saved;
+      } else {
+        _habits[index] = updated.copyWith(
+          streak: existing.streak,
+          isCompletedToday: existing.isCompletedToday,
+          todayLoggedCount: existing.todayLoggedCount,
+          frequencyLogs: List<Map<String, dynamic>>.from(existing.frequencyLogs),
+          daysOnTarget: existing.daysOnTarget,
+        );
+      }
+
+      await _persist();
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteHabit(String habitId) async {
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      if (await TokenStorage.hasToken()) {
+        await _api.deleteHabit(habitId);
+      }
+      _habits.removeWhere((h) => h.id == habitId);
+      await _persist();
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> toggleCompletion(
     String habitId, {
     ProgressProvider? progressProvider,
@@ -123,8 +190,18 @@ class HabitsProvider extends ChangeNotifier {
 
     try {
       if (await TokenStorage.hasToken()) {
-        final updated = await _api.markHabitComplete(habitId);
-        _habits[index] = Habit.fromApiMap(updated);
+        if (!habit.isCompletedToday) {
+          try {
+            final updated = await _api.markHabitComplete(habitId);
+            _habits[index] = Habit.fromApiMap(updated);
+          } on ApiException catch (e) {
+            if (e.statusCode != 400) rethrow;
+            habit.isCompletedToday = true;
+          }
+        } else {
+          habit.isCompletedToday = false;
+          if (habit.streak > 0) habit.streak -= 1;
+        }
       } else {
         final wasCompleted = habit.isCompletedToday;
         habit.isCompletedToday = !wasCompleted;
@@ -151,6 +228,29 @@ class HabitsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> markBadHabitBroken(String habitId) async {
+    final index = _habits.indexWhere((h) => h.id == habitId);
+    if (index == -1) return;
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      if (await TokenStorage.hasToken()) {
+        final updated = await _api.breakHabit(habitId);
+        _habits[index] = Habit.fromApiMap(updated);
+      } else {
+        final habit = _habits[index];
+        habit.daysOnTarget = 0;
+        habit.streak = 0;
+      }
+      await _persist();
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> updateBadHabitCount(String habitId, double count) async {
     final index = _habits.indexWhere((h) => h.id == habitId);
     if (index == -1) return;
@@ -159,28 +259,12 @@ class HabitsProvider extends ChangeNotifier {
     if (!habit.isBadHabit) return;
 
     final safeCount = count < 0 ? 0.0 : count;
+    habit.todayLoggedCount = safeCount;
+    _logFrequencyForToday(habit, safeCount);
+    _recalculateBadHabitStreak(habit);
 
-    _isSyncing = true;
+    await _persist();
     notifyListeners();
-
-    try {
-      if (await TokenStorage.hasToken()) {
-        final updated = await _api.breakHabit(
-          habitId,
-          todayLoggedCount: safeCount,
-        );
-        _habits[index] = Habit.fromApiMap(updated);
-      } else {
-        habit.todayLoggedCount = safeCount;
-        _logFrequencyForToday(habit, safeCount);
-        _recalculateBadHabitStreak(habit);
-      }
-
-      await _persist();
-    } finally {
-      _isSyncing = false;
-      notifyListeners();
-    }
   }
 
   List<double> weeklyReductionData(Habit habit) {
@@ -203,8 +287,8 @@ class HabitsProvider extends ChangeNotifier {
     for (final log in habit.frequencyLogs) {
       final date = DateTime.parse(log['date'] as String);
       if (!_isWithinLastWeek(date)) continue;
-      final count = (log['count'] as num).toDouble();
-      if (count < baseline) saved += baseline - count;
+      final logCount = (log['count'] as num).toDouble();
+      if (logCount < baseline) saved += baseline - logCount;
     }
     return saved;
   }

@@ -6,13 +6,18 @@ import 'package:provider/provider.dart';
 import '../custom_widgets/custom_colors.dart';
 import '../models/habit.dart';
 import '../providers/habits_provider.dart';
+import 'habit_card_menu.dart';
 
 class BadHabitCard extends StatelessWidget {
   final Habit habit;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const BadHabitCard({
     super.key,
     required this.habit,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -98,6 +103,10 @@ class BadHabitCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onEdit != null && onDelete != null) ...[
+                const SizedBox(width: 4),
+                HabitCardMenu(onEdit: onEdit!, onDelete: onDelete!),
+              ],
             ],
           ),
           const SizedBox(height: 16),

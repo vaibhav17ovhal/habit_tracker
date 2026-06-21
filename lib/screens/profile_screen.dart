@@ -10,10 +10,9 @@ import 'package:Demo/providers/rewards_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
 import 'package:Demo/screens/edit_profile_screen.dart';
 import 'package:Demo/screens/privacy_policy_screen.dart';
-import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/screens/terms_and_condition_screen.dart';
-import 'package:Demo/services/hive_service.dart';
-import 'package:Demo/utils/app_page_route.dart';
+import 'package:Demo/services/api_service.dart';
+import 'package:Demo/utils/auth_navigation.dart';
 import 'package:Demo/widgets/animated_theme_toggle.dart';
 import 'package:Demo/widgets/profile_gamification_card.dart';
 import 'package:Demo/widgets/profile_leaderboard_section.dart';
@@ -211,15 +210,15 @@ class ProfileScreen extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     context.read<DashboardProvider>().reset();
-    await context.read<UserProvider>().logout();
-    await HiveService.settings.put(HiveService.keyIsLogin, false);
 
-    if (!context.mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      AppPageRoute(page: const SignInScreen()),
-      (_) => false,
-    );
+    try {
+      await context.read<UserProvider>().logout();
+    } catch (e) {
+      if (context.mounted) showApiErrorSnackBar(context, e);
+      return;
+    }
+
+    navigateToSignIn(clearLoginFlag: false);
   }
 
   Future<void> _deleteAccount(BuildContext context) async {
@@ -251,17 +250,18 @@ class ProfileScreen extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     context.read<DashboardProvider>().reset();
-    await context.read<UserProvider>().deleteAccount();
-    await context.read<HabitsProvider>().loadFromStorage();
-    await context.read<ProgressProvider>().loadFromStorage();
-    await context.read<MoodProvider>().loadFromStorage();
 
-    if (!context.mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      AppPageRoute(page: const SignInScreen()),
-      (_) => false,
-    );
+    try {
+      await context.read<UserProvider>().deleteAccount();
+      await context.read<HabitsProvider>().clearAll();
+      await context.read<ProgressProvider>().loadFromStorage();
+      await context.read<MoodProvider>().loadFromStorage();
+    } catch (e) {
+      if (context.mounted) showApiErrorSnackBar(context, e);
+      return;
+    }
+
+    navigateToSignIn(clearLoginFlag: false);
   }
 }
 

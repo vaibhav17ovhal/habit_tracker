@@ -138,6 +138,7 @@ class _AddNewHabitScreenState extends State<AddNewHabitScreen> {
 
     try {
       await habitsProvider.addHabit(habit);
+      await habitsProvider.fetchFromApi();
       await progressProvider.recordDay(
         date: DateTime.now(),
         completedCount: habitsProvider.completedCount,

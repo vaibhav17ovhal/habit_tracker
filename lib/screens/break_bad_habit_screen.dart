@@ -142,6 +142,7 @@ class _BreakBadHabitScreenState extends State<BreakBadHabitScreen> {
       );
 
       await context.read<HabitsProvider>().addHabit(habit);
+      await context.read<HabitsProvider>().fetchFromApi();
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

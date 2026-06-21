@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 enum HabitFrequency { daily, weekly, monthly }
@@ -174,48 +176,68 @@ class Habit {
     );
   }
 
-  Map<String, dynamic> toApiMap() => {
-        'name': name,
-        'iconPath': iconPath,
-        'color': color.toARGB32(),
-        'type': isBadHabit ? 'bad' : 'good',
-        'frequency': frequency.name,
-        'reminderTime': reminderTime,
-        'startDate': startDate?.toIso8601String(),
-        'endDate': endDate?.toIso8601String(),
-        'streak': streak,
-        'isCompletedToday': isCompletedToday,
-        'baselineFrequency': baselineFrequency,
-        'targetFrequency': targetFrequency,
-        'goalType': goalType?.name,
-        'frequencyUnit': frequencyUnit,
-        'replacementAction': replacementAction,
-        'triggerNotes': triggerNotes,
-        'todayLoggedCount': todayLoggedCount,
-        'frequencyLogs': frequencyLogs,
-        'daysOnTarget': daysOnTarget,
-      };
+  Map<String, dynamic> toApiMap() {
+    final meta = {
+      'iconPath': iconPath,
+      'color': color.toARGB32(),
+      if (startDate != null) 'startDate': startDate!.toIso8601String(),
+      if (endDate != null) 'endDate': endDate!.toIso8601String(),
+      if (baselineFrequency != null) 'baselineFrequency': baselineFrequency,
+      if (targetFrequency != null) 'targetFrequency': targetFrequency,
+      if (goalType != null) 'goalType': goalType!.name,
+      if (frequencyUnit != null) 'frequencyUnit': frequencyUnit,
+      if (replacementAction != null) 'replacementAction': replacementAction,
+      if (triggerNotes != null) 'triggerNotes': triggerNotes,
+      'todayLoggedCount': todayLoggedCount,
+      'frequencyLogs': frequencyLogs,
+      'daysOnTarget': daysOnTarget,
+    };
+
+    final reminders = <String>[
+      if (reminderTime != null && reminderTime!.isNotEmpty) reminderTime!,
+      'meta:${jsonEncode(meta)}',
+    ];
+
+    return {
+      'title': name,
+      'type': isBadHabit ? 'bad' : 'good',
+      'frequency': _apiFrequency,
+      'reminders': reminders,
+    };
+  }
+
+  String get _apiFrequency {
+    switch (frequency) {
+      case HabitFrequency.daily:
+        return 'daily';
+      case HabitFrequency.weekly:
+        return 'weekly';
+      case HabitFrequency.monthly:
+        return 'custom';
+    }
+  }
 
   factory Habit.fromApiMap(Map<String, dynamic> map) {
     HabitType parseType(dynamic value) {
-      if (value == 'bad' || value == 1) return HabitType.bad;
+      if (value == 'bad') return HabitType.bad;
       return HabitType.good;
     }
 
     HabitFrequency parseFrequency(dynamic value) {
-      if (value is int) {
-        return HabitFrequency.values[value.clamp(0, 2)];
-      }
       final name = value?.toString() ?? 'daily';
-      return HabitFrequency.values.firstWhere(
-        (f) => f.name == name,
-        orElse: () => HabitFrequency.daily,
-      );
+      switch (name) {
+        case 'weekly':
+          return HabitFrequency.weekly;
+        case 'custom':
+        case 'monthly':
+          return HabitFrequency.monthly;
+        default:
+          return HabitFrequency.daily;
+      }
     }
 
     BadHabitGoalType? parseGoalType(dynamic value) {
       if (value == null) return null;
-      if (value is int) return BadHabitGoalType.values[value];
       final name = value.toString();
       return BadHabitGoalType.values.firstWhere(
         (g) => g.name == name,
@@ -228,30 +250,65 @@ class Habit {
       return DateTime.tryParse(value.toString());
     }
 
+    final reminders = map['reminders'] as List? ?? [];
+    Map<String, dynamic> meta = {};
+    String? reminderTime;
+
+    for (final item in reminders) {
+      final text = item.toString();
+      if (text.startsWith('meta:')) {
+        try {
+          meta = Map<String, dynamic>.from(
+            jsonDecode(text.substring(5)) as Map,
+          );
+        } catch (_) {}
+      } else {
+        reminderTime ??= text;
+      }
+    }
+
+    final completedDates =
+        (map['completedDates'] as List?)?.map((e) => e.toString()).toList() ??
+            [];
+    final todayKey = _todayDateKey();
+    final isCompletedToday = completedDates.contains(todayKey);
+
+    final brokenDates =
+        (map['brokenDates'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
     return Habit(
       id: map['id']?.toString() ?? map['_id']?.toString() ?? '',
-      name: map['name'] as String? ?? '',
-      iconPath: map['iconPath'] as String? ?? '',
-      color: Color((map['color'] as num?)?.toInt() ?? 0xFF3B82F6),
+      name: map['title'] as String? ?? map['name'] as String? ?? '',
+      iconPath: meta['iconPath'] as String? ?? 'assets/habit_icon/Meditation-bro.svg',
+      color: Color((meta['color'] as num?)?.toInt() ?? 0xFF3B82F6),
       type: parseType(map['type']),
       frequency: parseFrequency(map['frequency']),
-      reminderTime: map['reminderTime'] as String?,
-      startDate: parseDate(map['startDate']),
-      endDate: parseDate(map['endDate']),
+      reminderTime: reminderTime ?? meta['reminderTime'] as String?,
+      startDate: parseDate(meta['startDate']),
+      endDate: parseDate(meta['endDate']),
       streak: (map['streak'] as num?)?.toInt() ?? 0,
-      isCompletedToday: map['isCompletedToday'] as bool? ?? false,
-      baselineFrequency: (map['baselineFrequency'] as num?)?.toDouble(),
-      targetFrequency: (map['targetFrequency'] as num?)?.toDouble(),
-      goalType: parseGoalType(map['goalType']),
-      frequencyUnit: map['frequencyUnit'] as String?,
-      replacementAction: map['replacementAction'] as String?,
-      triggerNotes: map['triggerNotes'] as String?,
-      todayLoggedCount: (map['todayLoggedCount'] as num?)?.toDouble() ?? 0,
-      frequencyLogs: (map['frequencyLogs'] as List?)
+      isCompletedToday: isCompletedToday,
+      baselineFrequency: (meta['baselineFrequency'] as num?)?.toDouble(),
+      targetFrequency: (meta['targetFrequency'] as num?)?.toDouble(),
+      goalType: parseGoalType(meta['goalType']),
+      frequencyUnit: meta['frequencyUnit'] as String?,
+      replacementAction: meta['replacementAction'] as String?,
+      triggerNotes: meta['triggerNotes'] as String?,
+      todayLoggedCount: (meta['todayLoggedCount'] as num?)?.toDouble() ?? 0,
+      frequencyLogs: (meta['frequencyLogs'] as List?)
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
           <Map<String, dynamic>>[],
-      daysOnTarget: (map['daysOnTarget'] as num?)?.toInt() ?? 0,
+      daysOnTarget: brokenDates.isEmpty
+          ? (meta['daysOnTarget'] as num?)?.toInt() ?? 0
+          : 0,
     );
+  }
+
+  static String _todayDateKey() {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
   }
 }

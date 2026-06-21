@@ -1,10 +1,8 @@
 import 'package:Demo/custom_widgets/providers.dart';
-import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/screens/splash_screen.dart';
 import 'package:Demo/services/api_service.dart';
-import 'package:Demo/services/hive_service.dart';
-import 'package:Demo/theme/app_theme.dart';
-import 'package:Demo/utils/app_page_route.dart';
+import 'package:Demo/services/hive_service.dart';import 'package:Demo/theme/app_theme.dart';
+import 'package:Demo/utils/auth_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,14 +15,7 @@ void main() async {
   await HiveService.init();
 
   ApiService.onUnauthorized = () {
-    final context = rootNavigatorKey.currentContext;
-    if (context == null) return;
-
-    HiveService.settings.put(HiveService.keyIsLogin, false);
-    rootNavigatorKey.currentState?.pushAndRemoveUntil(
-      AppPageRoute(page: const SignInScreen()),
-      (_) => false,
-    );
+    navigateToSignIn();
   };
 
   runApp(const MyApp());

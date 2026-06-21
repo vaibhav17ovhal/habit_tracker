@@ -118,8 +118,7 @@ class ApiService {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message =
-          body['message'] as String? ??
-          'Request failed (${response.statusCode})';
+          body['message'] as String? ?? 'Request failed (${response.statusCode})';
       _log('[$label] ✗ API ERROR ($response.statusCode): $message');
       throw ApiException(message, response.statusCode);
     }
@@ -140,7 +139,7 @@ class ApiService {
 
     _log('────────────────────────────────────────');
     _log('[$label] ▶ $method $url');
-    _log('[$label] BASE URL: ${ApiConfig.baseUrl}');
+    _log('[$label] MODE: ${ApiConfig.deviceLabel}');
     _log('[$label] HEADERS: ${_sanitizeHeaders(requestHeaders)}');
     if (body != null) {
       _log('[$label] REQUEST: ${_sanitizeBody(body)}');
@@ -148,20 +147,40 @@ class ApiService {
 
     try {
       final uri = Uri.parse(url);
-      late http.Response response;
+      final client = http.Client();
 
-      switch (method) {
-        case 'GET':
-          response = await http.get(uri, headers: requestHeaders);
-        case 'POST':
-          response = await http.post(uri, headers: requestHeaders, body: body);
-        case 'PATCH':
-          response = await http.patch(uri, headers: requestHeaders, body: body);
-        default:
-          throw ApiException('Unsupported HTTP method: $method', 0);
+      try {
+        late http.Response response;
+
+        switch (method) {
+          case 'GET':
+            response = await client
+                .get(uri, headers: requestHeaders)
+                .timeout(ApiConfig.requestTimeout);
+          case 'POST':
+            response = await client
+                .post(uri, headers: requestHeaders, body: body)
+                .timeout(ApiConfig.requestTimeout);
+          case 'PATCH':
+            response = await client
+                .patch(uri, headers: requestHeaders, body: body)
+                .timeout(ApiConfig.requestTimeout);
+          case 'PUT':
+            response = await client
+                .put(uri, headers: requestHeaders, body: body)
+                .timeout(ApiConfig.requestTimeout);
+          case 'DELETE':
+            response = await client
+                .delete(uri, headers: requestHeaders, body: body)
+                .timeout(ApiConfig.requestTimeout);
+          default:
+            throw ApiException('Unsupported HTTP method: $method', 0);
+        }
+
+        return await _handleResponse(response, label: label);
+      } finally {
+        client.close();
       }
-
-      return await _handleResponse(response, label: label);
     } on ApiException {
       rethrow;
     } catch (e, stack) {
@@ -175,17 +194,10 @@ class ApiService {
   void _logConnectionHelp() {
     _log('TROUBLESHOOTING:');
     _log('  1. Start backend: cd Habit_tracker_backend && npm run dev');
-    _log('  2. PC browser test: http://localhost:${ApiConfig.port}/');
-    if (ApiConfig.isUsingLanHost) {
-      _log('  3. Flutter uses LAN IP: ${ApiConfig.baseUrl}');
-      _log(
-        '  4. Update ApiConfig.androidDevHost if ipconfig shows a different IPv4',
-      );
-      _log('  5. Phone/emulator must reach that IP (same Wi‑Fi / network)');
-    } else {
-      _log('  3. Desktop uses: ${ApiConfig.baseUrl}');
-    }
-    _log('  6. Allow port ${ApiConfig.port} in Windows Firewall if needed');
+    _log('  2. PC browser: http://localhost:${ApiConfig.port}/');
+    _log('  3. Android emulator → ApiDeviceMode.emulator (10.0.2.2)');
+    _log('  4. Physical phone → ApiDeviceMode.physicalDevice + pcLanHost');
+    _log('  5. Allow port ${ApiConfig.port} in Windows Firewall');
   }
 
   String _networkErrorMessage(Object error) {
@@ -197,37 +209,36 @@ class ApiService {
         text.contains('failed host lookup') ||
         text.contains('network is unreachable')) {
       return 'Cannot reach server at $url. '
-          'Start backend (npm run dev), then set ApiConfig.androidDevHost '
-          'to your PC IPv4 from ipconfig (currently ${ApiConfig.androidDevHost}).';
+          'Check backend is running and ApiConfig.androidMode matches your device '
+          '(emulator=10.0.2.2, physical=${ApiConfig.pcLanHost}).';
+    }
+
+    if (text.contains('timeout')) {
+      return 'Request timed out connecting to $url.';
     }
 
     return 'Network error: ${error.toString()}';
   }
 
-  /// Sign Up
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
   Future<AuthResponse> signup({
+    required String name,
     required String email,
     required String password,
-    required String name,
-  }) async
-  {
+  }) async {
     const label = 'SIGNUP';
 
     final body = await _send(
       label: label,
       method: 'POST',
       path: '/signup',
-      body: jsonEncode({'email': email, 'password': password, 'name': name}),
+      body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
 
     final token = body['token'] as String?;
-
     if (token == null || token.isEmpty) {
-      _log('[$label] ✗ No token in signup response');
-      throw const ApiException(
-        'Signup succeeded but no token was returned',
-        500,
-      );
+      throw const ApiException('Signup succeeded but no token was returned', 500);
     }
 
     await TokenStorage.saveToken(token);
@@ -239,12 +250,10 @@ class ApiService {
     );
   }
 
-  /// Login
   Future<AuthResponse> login({
     required String email,
     required String password,
-  }) async
-  {
+  }) async {
     const label = 'LOGIN';
 
     final body = await _send(
@@ -255,13 +264,8 @@ class ApiService {
     );
 
     final token = body['token'] as String?;
-
     if (token == null || token.isEmpty) {
-      _log('[$label] ✗ No token in login response');
-      throw const ApiException(
-        'Login succeeded but no token was returned',
-        500,
-      );
+      throw const ApiException('Login succeeded but no token was returned', 500);
     }
 
     await TokenStorage.saveToken(token);
@@ -273,15 +277,42 @@ class ApiService {
     );
   }
 
-  /// Log out
   Future<void> logout() async {
-    _log('[LOGOUT] Clearing JWT from secure storage');
-    await TokenStorage.deleteToken();
-    _log('[LOGOUT] ✓ Token cleared');
+    const label = 'LOGOUT';
+
+    try {
+      if (await TokenStorage.hasToken()) {
+        await _send(
+          label: label,
+          method: 'POST',
+          path: '/logout',
+          auth: true,
+        );
+      }
+    } catch (e) {
+      _log('[$label] Server logout failed (clearing local session anyway): $e');
+    } finally {
+      await TokenStorage.deleteToken();
+      _log('[$label] JWT cleared from secure storage');
+    }
   }
 
+  Future<void> deleteAccount() async {
+    const label = 'DELETE ACCOUNT';
 
-  /// Add Habit
+    await _send(
+      label: label,
+      method: 'DELETE',
+      path: '/delete-account',
+      auth: true,
+    );
+
+    await TokenStorage.deleteToken();
+    _log('[$label] Account deleted; JWT cleared from secure storage');
+  }
+
+  // ── Habits ────────────────────────────────────────────────────────────────
+
   Future<Map<String, dynamic>> addHabit(Map<String, dynamic> habitData) async {
     const label = 'ADD HABIT';
 
@@ -296,7 +327,6 @@ class ApiService {
     return Map<String, dynamic>.from(body['habit'] as Map? ?? {});
   }
 
-  /// Get Habit
   Future<List<Map<String, dynamic>>> getHabits() async {
     const label = 'GET HABITS';
 
@@ -308,11 +338,7 @@ class ApiService {
     );
 
     final habits = body['habits'];
-
-    if (habits is! List) {
-      _log('[$label] ⚠ habits field missing or not a list — returning []');
-      return [];
-    }
+    if (habits is! List) return [];
 
     _log('[$label] Parsed ${habits.length} habit(s)');
     return habits
@@ -320,38 +346,71 @@ class ApiService {
         .toList();
   }
 
-  /// Mark Habit Complete
-  Future<Map<String, dynamic>> markHabitComplete(String habitId) async {
-    const label = 'MARK COMPLETE';
+  Future<Map<String, dynamic>> getHabitById(String id) async {
+    const label = 'GET HABIT BY ID';
 
     final body = await _send(
       label: label,
-      method: 'PATCH',
-      path: '/habits/$habitId/complete',
+      method: 'GET',
+      path: '/habits/$id',
       auth: true,
     );
 
     return Map<String, dynamic>.from(body['habit'] as Map? ?? {});
   }
 
+  Future<Map<String, dynamic>> markHabitComplete(String id) async {
+    const label = 'MARK COMPLETE';
 
-  /// Break Bad Habit
-  Future<Map<String, dynamic>> breakHabit(
-    String habitId, {
-    required double todayLoggedCount,
-  }) async
-  {
+    final body = await _send(
+      label: label,
+      method: 'PATCH',
+      path: '/habits/$id/complete',
+      auth: true,
+    );
+
+    return Map<String, dynamic>.from(body['habit'] as Map? ?? {});
+  }
+
+  Future<Map<String, dynamic>> breakHabit(String id) async {
     const label = 'BREAK HABIT';
 
     final body = await _send(
       label: label,
       method: 'PATCH',
-      path: '/habits/$habitId/break',
+      path: '/habits/$id/break',
       auth: true,
-      body: jsonEncode({'todayLoggedCount': todayLoggedCount}),
     );
 
     return Map<String, dynamic>.from(body['habit'] as Map? ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateHabit(
+    String id,
+    Map<String, dynamic> habitData,
+  ) async {
+    const label = 'UPDATE HABIT';
+
+    final body = await _send(
+      label: label,
+      method: 'PUT',
+      path: '/habits/$id',
+      auth: true,
+      body: jsonEncode(habitData),
+    );
+
+    return Map<String, dynamic>.from(body['habit'] as Map? ?? {});
+  }
+
+  Future<void> deleteHabit(String id) async {
+    const label = 'DELETE HABIT';
+
+    await _send(
+      label: label,
+      method: 'DELETE',
+      path: '/habits/$id',
+      auth: true,
+    );
   }
 }
 
