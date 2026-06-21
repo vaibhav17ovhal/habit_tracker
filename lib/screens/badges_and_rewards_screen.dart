@@ -16,6 +16,7 @@ class BadgesAndRewardsScreen extends StatelessWidget {
     final rewardsProvider = context.read<RewardsProvider>();
     final badges = rewardsProvider.badgesFor(habitsProvider);
     final unlocked = badges.where((b) => b.isUnlocked).length;
+    final maxStreak = habitsProvider.maxStreak;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return CustomScaffold(
@@ -23,6 +24,7 @@ class BadgesAndRewardsScreen extends StatelessWidget {
           isDark ? const Color(0xFF111827) : MyColors.neutralGray,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         title: Text(
           'Rewards',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -31,16 +33,16 @@ class BadgesAndRewardsScreen extends StatelessWidget {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
                     MyColors.primaryBlue,
-                    MyColors.primaryBlue.withValues(alpha: 0.8),
+                    MyColors.primaryBlue.withValues(alpha: 0.75),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -48,48 +50,46 @@ class BadgesAndRewardsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.emoji_events_rounded,
-                          color: MyColors.accentYellow,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$unlocked / ${badges.length}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Badges Unlocked',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
                   Text(
-                    'Keep your streaks alive to unlock more rewards!',
+                    '$unlocked / ${badges.length}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'Badges Unlocked',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Best streak: $maxStreak days',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Complete habits daily to grow your streak!',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.9),
@@ -98,29 +98,30 @@ class BadgesAndRewardsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 28),
             Text(
-              'Your Badges',
+              'Streak Badges',
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : MyColors.kBlackColor,
               ),
             ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: badges.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.85,
+            const SizedBox(height: 16),
+            ...badges.map(
+              (badge) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 360),
+                    child: BadgeCard(
+                      badge: badge,
+                      currentStreak: maxStreak,
+                    ),
+                  ),
+                ),
               ),
-              itemBuilder: (context, index) {
-                return BadgeCard(badge: badges[index]);
-              },
             ),
           ],
         ),

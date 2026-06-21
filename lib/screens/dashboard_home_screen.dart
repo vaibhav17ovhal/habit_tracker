@@ -5,7 +5,8 @@ import 'package:Demo/providers/dashboard_provider.dart';
 import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/progress_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
-import 'package:Demo/screens/habit_creation_screen.dart';
+import 'package:Demo/widgets/app_bar_mood_chip.dart';
+import 'package:Demo/widgets/motivational_quote_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -19,11 +20,14 @@ class DashboardHomeScreen extends StatelessWidget {
     final dashboardProvider = context.read<DashboardProvider>();
     final userProvider = context.watch<UserProvider>();
     final progressProvider = context.read<ProgressProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return CustomScaffold(
-      backgroundColor: MyColors.neutralGray,
+      backgroundColor:
+          isDark ? const Color(0xFF111827) : MyColors.neutralGray,
       appBar: AppBar(
-        backgroundColor: MyColors.kWhiteColor,
+        backgroundColor:
+            isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Text(
@@ -35,6 +39,7 @@ class DashboardHomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
+          const AppBarMoodChip(),
           GestureDetector(
             onTap: () => dashboardProvider.changeIndex(3),
             child: Padding(
@@ -50,24 +55,27 @@ class DashboardHomeScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: habitsProvider.habits.isEmpty
-                ? _EmptyHabitsState(
-                    onAddHabit: () => _navigateToCreateHabit(context),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    itemCount: habitsProvider.habits.length,
-                    itemBuilder: (context, index) {
-                      final habit = habitsProvider.habits[index];
-                      return HabitCard(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 8),
+              children: [
+                const MotivationalQuoteBanner(),
+                if (habitsProvider.habits.isEmpty)
+                  const _EmptyHabitsState()
+                else
+                  ...habitsProvider.habits.map(
+                    (habit) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: HabitCard(
                         habit: habit,
                         onToggle: (_) => habitsProvider.toggleCompletion(
                           habit.id,
                           progressProvider: progressProvider,
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
+              ],
+            ),
           ),
           _ProgressSummaryBar(
             completed: habitsProvider.completedCount,
@@ -76,13 +84,6 @@ class DashboardHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  static void _navigateToCreateHabit(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const HabitCreationScreen()),
     );
   }
 }
@@ -100,11 +101,13 @@ class _ProgressSummaryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
-        color: MyColors.kWhiteColor,
+        color: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -124,7 +127,7 @@ class _ProgressSummaryBar extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: MyColors.kBlackColor,
+                  color: isDark ? Colors.white : MyColors.kBlackColor,
                 ),
               ),
               Text(
@@ -141,7 +144,7 @@ class _ProgressSummaryBar extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: progress,
+              value: total == 0 ? 0 : progress,
               minHeight: 8,
               backgroundColor: MyColors.neutralGray,
               valueColor: const AlwaysStoppedAnimation<Color>(
@@ -156,55 +159,40 @@ class _ProgressSummaryBar extends StatelessWidget {
 }
 
 class _EmptyHabitsState extends StatelessWidget {
-  final VoidCallback onAddHabit;
-
-  const _EmptyHabitsState({required this.onAddHabit});
+  const _EmptyHabitsState();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.track_changes_rounded,
-              size: 64,
-              color: MyColors.primaryBlue.withValues(alpha: 0.5),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          Icon(
+            Icons.track_changes_rounded,
+            size: 64,
+            color: MyColors.primaryBlue.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No habits yet',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : MyColors.kBlackColor,
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No habits yet',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: MyColors.kBlackColor,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap + to add a habit or log your mood',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: MyColors.kDescriptionColor,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap + to create your first habit',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: MyColors.kDescriptionColor,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onAddHabit,
-              icon: const Icon(Icons.add, color: MyColors.primaryBlue),
-              label: Text(
-                'Add habit',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: MyColors.primaryBlue,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

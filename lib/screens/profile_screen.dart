@@ -1,8 +1,20 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
 import 'package:Demo/custom_widgets/custom_scaffold.dart';
+import 'package:Demo/providers/dashboard_provider.dart';
+import 'package:Demo/providers/gamification_provider.dart';
+import 'package:Demo/providers/habits_provider.dart';
+import 'package:Demo/providers/leaderboard_provider.dart';
+import 'package:Demo/providers/mood_provider.dart';
+import 'package:Demo/providers/progress_provider.dart';
+import 'package:Demo/providers/rewards_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
+import 'package:Demo/screens/edit_profile_screen.dart';
+import 'package:Demo/screens/privacy_policy_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
+import 'package:Demo/screens/terms_and_condition_screen.dart';
 import 'package:Demo/services/hive_service.dart';
+import 'package:Demo/widgets/profile_gamification_card.dart';
+import 'package:Demo/widgets/profile_leaderboard_section.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +25,25 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
+    final habitsProvider = context.watch<HabitsProvider>();
+    final progressProvider = context.watch<ProgressProvider>();
+    final rewardsProvider = context.read<RewardsProvider>();
+    final gamificationProvider = context.read<GamificationProvider>();
+    final leaderboardProvider = context.read<LeaderboardProvider>();
+    final gamificationStats = gamificationProvider.statsFor(
+      habits: habitsProvider,
+      progress: progressProvider,
+      rewards: rewardsProvider,
+    );
+    final leaderboardEntries = leaderboardProvider.buildLeaderboard(
+      user: userProvider,
+      habits: habitsProvider,
+      progress: progressProvider,
+      rewards: rewardsProvider,
+      gamification: gamificationProvider,
+    );
+    final currentUserEntry =
+        leaderboardProvider.currentUserEntry(leaderboardEntries);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return CustomScaffold(
@@ -33,8 +64,42 @@ class ProfileScreen extends StatelessWidget {
               name: userProvider.displayName,
               email: userProvider.displayEmail,
               avatarPath: userProvider.avatarPath,
+              onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EditProfileScreen(),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            ProfileGamificationCard(stats: gamificationStats),
+            const SizedBox(height: 16),
+            ProfileLeaderboardSection(
+              entries: leaderboardEntries,
+              currentUser: currentUserEntry,
+            ),
+            const SizedBox(height: 16),
+            _SettingsSection(
+              title: 'Profile',
+              children: [
+                _SettingsTile(
+                  icon: Icons.edit_outlined,
+                  title: 'Edit Profile',
+                  subtitle: 'Update name and email',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             _SettingsSection(
               title: 'Preferences',
               children: [
@@ -64,6 +129,30 @@ class ProfileScreen extends StatelessWidget {
               title: 'Account',
               children: [
                 _SettingsTile(
+                  icon: Icons.description_outlined,
+                  title: 'Terms & Conditions',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TermsAndConditionScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _SettingsTile(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Privacy Policy',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _SettingsTile(
                   icon: Icons.info_outline_rounded,
                   title: 'App Version',
                   subtitle: '1.0.0',
@@ -75,6 +164,14 @@ class ProfileScreen extends StatelessWidget {
                   titleColor: const Color(0xFFEF4444),
                   iconColor: const Color(0xFFEF4444),
                   onTap: () => _logout(context),
+                ),
+                _SettingsTile(
+                  icon: Icons.delete_forever_outlined,
+                  title: 'Delete Account',
+                  subtitle: 'Permanently remove your data',
+                  titleColor: const Color(0xFFEF4444),
+                  iconColor: const Color(0xFFEF4444),
+                  onTap: () => _deleteAccount(context),
                 ),
               ],
             ),
@@ -111,8 +208,51 @@ class ProfileScreen extends StatelessWidget {
 
     if (confirmed != true || !context.mounted) return;
 
+    context.read<DashboardProvider>().reset();
     await context.read<UserProvider>().logout();
     await HiveService.settings.put(HiveService.keyIsLogin, false);
+
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+      (_) => false,
+    );
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Account', style: GoogleFonts.poppins()),
+        content: Text(
+          'This will permanently delete your profile, habits, progress, '
+          'and mood data. This action cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(color: const Color(0xFFEF4444)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    context.read<DashboardProvider>().reset();
+    await context.read<UserProvider>().deleteAccount();
+    await context.read<HabitsProvider>().loadFromStorage();
+    await context.read<ProgressProvider>().loadFromStorage();
+    await context.read<MoodProvider>().loadFromStorage();
 
     if (!context.mounted) return;
     Navigator.pushAndRemoveUntil(
@@ -127,11 +267,13 @@ class _ProfileHeader extends StatelessWidget {
   final String name;
   final String email;
   final String avatarPath;
+  final VoidCallback onEdit;
 
   const _ProfileHeader({
     required this.name,
     required this.email,
     required this.avatarPath,
+    required this.onEdit,
   });
 
   @override
@@ -150,9 +292,33 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 44,
-            backgroundImage: AssetImage(avatarPath),
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 44,
+                backgroundImage: AssetImage(avatarPath),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: onEdit,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: MyColors.primaryBlue,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           Text(

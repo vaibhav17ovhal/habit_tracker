@@ -1,3 +1,4 @@
+import 'package:Demo/providers/dashboard_provider.dart';
 import 'package:Demo/providers/login_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
 import 'package:Demo/models/user.dart';
@@ -136,6 +137,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         );
 
                         provider.clearFields();
+                        context.read<DashboardProvider>().reset();
 
                         if (!context.mounted) return;
                         Navigator.pushReplacement(

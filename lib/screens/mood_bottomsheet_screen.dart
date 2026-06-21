@@ -1,6 +1,9 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
+import 'package:Demo/models/mood.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/mood_provider.dart';
 
 class MoodBottomSheet extends StatelessWidget {
@@ -10,82 +13,74 @@ class MoodBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<MoodProvider>(
       builder: (context, provider, child) {
+        final today = provider.todayMood;
+
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: MyColors.kWhiteColor,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20))
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
             ),
-            height: MediaQuery.of(context).size.height * 0.75,
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "How do you feel right now?",
-                  style: TextStyle(
+                  'How do you feel right now?',
+                  style: GoogleFonts.poppins(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-
-                SizedBox(height: 15),
-
+                const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children: provider.moods.map((mood) {
-                    final isSelected = provider.selectedMood == mood["label"];
+                  children: kMoodOptions.map((mood) {
+                    final isSelected = today?.label == mood.label;
 
                     return GestureDetector(
-                      onTap: () => provider.selectMood(mood["label"]),
+                      onTap: () async {
+                        await provider.selectMood(mood.label, mood.emoji);
+                        if (context.mounted) Navigator.pop(context);
+                      },
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // 🎯 ICON WITH SELECTED BACKGROUND
                           AnimatedContainer(
-                            duration: Duration(milliseconds: 200),
-                            padding: EdgeInsets.all(10),
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
+                              color: isSelected
+                                  ? MyColors.primaryBlue.withValues(alpha: 0.12)
+                                  : MyColors.neutralGray,
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: isSelected
-                                    ? Colors.teal
+                                    ? MyColors.primaryBlue
                                     : Colors.grey.shade300,
-                                width: 1.5,
+                                width: isSelected ? 2 : 1,
                               ),
-                              boxShadow: isSelected
-                                  ? [
-                                BoxShadow(
-                                  color: Colors.teal.withOpacity(0.2),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 4),
-                                )
-                              ]
-                                  : [],
                             ),
-                            child: Image.asset(
-                              mood["emoji"],
-                              height: 40,
-                              width: 40,
-                              fit: BoxFit.contain,
-                              gaplessPlayback: true,
-                            ),
+                            child: Text(mood.emoji,
+                                style: const TextStyle(fontSize: 32)),
                           ),
-
-                          SizedBox(height: 8),
-
-                          // 🏷 LABEL
+                          const SizedBox(height: 6),
                           Text(
-                            mood["label"],
-                            style: TextStyle(
-                              fontSize: 13,
+                            mood.label,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isSelected ? Colors.teal : Colors.black87,
+                              color: isSelected
+                                  ? MyColors.primaryBlue
+                                  : MyColors.kBlackColor,
                             ),
                           ),
                         ],
@@ -93,82 +88,7 @@ class MoodBottomSheet extends StatelessWidget {
                     );
                   }).toList(),
                 ),
-
-                SizedBox(height: 20),
-
-                Text(
-                  "What have you been up to?",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                SizedBox(height: 10),
-
-                // ================= ACTIVITIES =================
-                Wrap(
-                  spacing: 10,
-                  children: provider.activities.map((item) {
-                    final isSelected =
-                    provider.selectedActivities.contains(item);
-
-                    return FilterChip(
-                      label: Text(item),
-                      selected: isSelected,
-                      selectedColor: Colors.teal.shade200,
-                      onSelected: (_) =>
-                          provider.toggleActivity(item),
-                    );
-                  }).toList(),
-                ),
-
-                SizedBox(height: 20),
-
-                Text(
-                  "Additional context",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                SizedBox(height: 10),
-
-                TextField(
-                  controller: provider.noteController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: "Write something...",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-
-                Spacer(),
-
-                // ================= SAVE BUTTON =================
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      provider.saveMood();
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      "Save Mood",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

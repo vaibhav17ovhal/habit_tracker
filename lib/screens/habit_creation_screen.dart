@@ -1,6 +1,7 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
 import 'package:Demo/custom_widgets/custom_scaffold.dart';
 import 'package:Demo/models/habit.dart';
+import 'package:Demo/models/habit_template.dart';
 import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/progress_provider.dart';
 import 'package:flutter/material.dart';
@@ -17,39 +18,11 @@ class HabitCreationScreen extends StatefulWidget {
 }
 
 class _HabitCreationScreenState extends State<HabitCreationScreen> {
-  final _nameController = TextEditingController();
+  int? _selectedIndex;
   HabitFrequency _frequency = HabitFrequency.daily;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 8, minute: 0);
-  int _selectedIconIndex = 0;
-  int _selectedColorIndex = 0;
-
-  static const _icons = [
-    'assets/habit_icon/Meditation-bro.svg',
-    'assets/habit_icon/Cross country race-pana.svg',
-    'assets/habit_icon/Book lover-amico.svg',
-    'assets/break_habit_icon/stop_smoking_icon.svg',
-    'assets/break_habit_icon/limit_junk_food_icon.svg',
-    'assets/habit_icon/Insomnia-amico.svg',
-    'assets/habit_icon/Yoga practice-bro.svg',
-    'assets/habit_icon/Hydratation-rafiki.svg',
-  ];
-
-  static const _colors = [
-    MyColors.primaryBlue,
-    Color(0xFF10B981),
-    Color(0xFF8B5CF6),
-    Color(0xFFEF4444),
-    Color(0xFFF97316),
-    Color(0xFF6366F1),
-    Color(0xFFEC4899),
-    MyColors.accentYellow,
-  ];
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(const Duration(days: 30));
 
   Future<void> _pickReminderTime() async {
     final picked = await showTimePicker(
@@ -66,18 +39,51 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
         );
       },
     );
-    if (picked != null) {
-      setState(() => _reminderTime = picked);
-    }
+    if (picked != null) setState(() => _reminderTime = picked);
+  }
+
+  Future<void> _pickDate({
+    required bool isStart,
+    required DateTime initial,
+    required DateTime? min,
+    required DateTime? max,
+  }) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: min ?? DateTime(2020),
+      lastDate: max ?? DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: MyColors.primaryBlue,
+                ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null) return;
+
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate.add(const Duration(days: 30));
+        }
+      } else {
+        _endDate = picked;
+      }
+    });
   }
 
   Future<void> _saveHabit() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
+    if (_selectedIndex == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please enter a habit name',
+            'Please select a habit',
             style: GoogleFonts.poppins(),
           ),
           backgroundColor: MyColors.primaryBlue,
@@ -86,6 +92,20 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
       return;
     }
 
+    if (_endDate.isBefore(_startDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'End date must be after start date',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    final template = kHabitTemplates[_selectedIndex!];
     final habitsProvider = context.read<HabitsProvider>();
     final progressProvider = context.read<ProgressProvider>();
     final reminder = DateFormat('HH:mm').format(
@@ -94,11 +114,13 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
 
     final habit = Habit(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      iconPath: _icons[_selectedIconIndex],
-      color: _colors[_selectedColorIndex],
+      name: template.name,
+      iconPath: template.iconPath,
+      color: template.color,
       frequency: _frequency,
       reminderTime: reminder,
+      startDate: _startDate,
+      endDate: _endDate,
     );
 
     await habitsProvider.addHabit(habit);
@@ -115,6 +137,7 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dateFormat = DateFormat('MMM d, yyyy');
 
     return CustomScaffold(
       backgroundColor:
@@ -134,11 +157,103 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionTitle('Habit Name'),
-            TextField(
-              controller: _nameController,
-              style: GoogleFonts.poppins(),
-              decoration: _inputDecoration('e.g. Meditate, Run, Read'),
+            _sectionTitle('Choose Your Habit'),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: kHabitTemplates.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 0.82,
+              ),
+              itemBuilder: (context, index) {
+                final template = kHabitTemplates[index];
+                final isSelected = _selectedIndex == index;
+
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedIndex = index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: template.color.withValues(
+                        alpha: isSelected ? 0.25 : 0.12,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? template.color
+                            : template.color.withValues(alpha: 0.3),
+                        width: isSelected ? 2.5 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: template.color.withValues(alpha: 0.25),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SvgPicture.asset(
+                            template.iconPath,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          template.name,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : MyColors.kBlackColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            _sectionTitle('Start & End Date'),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateTile(
+                    label: 'Start Date',
+                    value: dateFormat.format(_startDate),
+                    onTap: () => _pickDate(
+                      isStart: true,
+                      initial: _startDate,
+                      min: DateTime(2020),
+                      max: DateTime(2030),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _DateTile(
+                    label: 'End Date',
+                    value: dateFormat.format(_endDate),
+                    onTap: () => _pickDate(
+                      isStart: false,
+                      initial: _endDate,
+                      min: _startDate,
+                      max: DateTime(2030),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             _sectionTitle('Frequency'),
@@ -155,7 +270,8 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
+                  color:
+                      isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isDark ? Colors.white12 : MyColors.neutralGray,
@@ -174,85 +290,11 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
                       ),
                     ),
                     const Spacer(),
-                    Icon(Icons.chevron_right,
+                    const Icon(Icons.chevron_right,
                         color: MyColors.kDescriptionColor),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            _sectionTitle('Choose Icon'),
-            SizedBox(
-              height: 72,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _icons.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
-                itemBuilder: (context, index) {
-                  final selected = _selectedIconIndex == index;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedIconIndex = index),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 72,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? _colors[_selectedColorIndex]
-                                .withValues(alpha: 0.15)
-                            : (isDark
-                                ? const Color(0xFF1F2937)
-                                : MyColors.kWhiteColor),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: selected
-                              ? _colors[_selectedColorIndex]
-                              : (isDark
-                                  ? Colors.white12
-                                  : MyColors.neutralGray),
-                          width: selected ? 2 : 1,
-                        ),
-                      ),
-                      child: SvgPicture.asset(_icons[index]),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            _sectionTitle('Choose Color'),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: List.generate(_colors.length, (index) {
-                final selected = _selectedColorIndex == index;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedColorIndex = index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: _colors[index],
-                      shape: BoxShape.circle,
-                      border: selected
-                          ? Border.all(color: MyColors.kBlackColor, width: 3)
-                          : null,
-                      boxShadow: selected
-                          ? [
-                              BoxShadow(
-                                color: _colors[index].withValues(alpha: 0.4),
-                                blurRadius: 8,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: selected
-                        ? const Icon(Icons.check, color: Colors.white, size: 20)
-                        : null,
-                  ),
-                );
-              }),
             ),
             const SizedBox(height: 36),
             SizedBox(
@@ -296,30 +338,63 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
       ),
     );
   }
+}
 
-  InputDecoration _inputDecoration(String hint) {
+class _DateTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _DateTile({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: GoogleFonts.poppins(color: MyColors.kTextFieldHintTextColor),
-      filled: true,
-      fillColor: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: isDark ? Colors.white12 : MyColors.neutralGray,
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? Colors.white12 : MyColors.neutralGray,
+          ),
         ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: isDark ? Colors.white12 : MyColors.neutralGray,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: MyColors.kDescriptionColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded,
+                    size: 16, color: MyColors.primaryBlue),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    value,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: MyColors.primaryBlue, width: 1.5),
       ),
     );
   }

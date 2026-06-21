@@ -1,11 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/banner_quote_provider.dart';
 import '../providers/break_bad_habit_provider.dart';
 import '../providers/build_a_habit_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/habits_provider.dart';
+import '../providers/gamification_provider.dart';
 import '../providers/home_provider.dart';
+import '../providers/leaderboard_provider.dart';
 import '../providers/login_provider.dart';
 import '../providers/mood_provider.dart';
 import '../providers/progress_provider.dart';
@@ -27,6 +30,9 @@ class AppProviders {
         ChangeNotifierProvider(create: (context) => UserProvider()),
         ChangeNotifierProvider(create: (context) => ProgressProvider()),
         ChangeNotifierProvider(create: (context) => RewardsProvider()),
+        ChangeNotifierProvider(create: (context) => GamificationProvider()),
+        ChangeNotifierProvider(create: (context) => LeaderboardProvider()),
+        ChangeNotifierProvider(create: (context) => BannerQuoteProvider()),
         ChangeNotifierProvider(create: (context) => HomeProvider()),
         ChangeNotifierProvider(create: (context) => MoodProvider()),
         ChangeNotifierProvider(create: (context) => BuildAHabitProvider()),

@@ -13,6 +13,8 @@ class HiveService {
   static const keyIsLogin = 'is_login';
   static const keyThemeDark = 'theme_dark';
   static const keyNotifications = 'notifications_enabled';
+  static const keyMoods = 'mood_records';
+  static const keyBannerQuote = 'banner_quote';
 
   static Future<void> init() async {
     await Hive.initFlutter();

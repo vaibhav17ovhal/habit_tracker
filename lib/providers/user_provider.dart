@@ -42,6 +42,17 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateProfile({
+    required String name,
+    required String email,
+  }) async {
+    if (_user == null) return;
+    final updated = _user!.copyWith(name: name, email: email);
+    await HiveService.user.put(HiveService.keyUser, updated.toMap());
+    _user = updated;
+    notifyListeners();
+  }
+
   Future<void> toggleTheme() async {
     _isDarkTheme = !_isDarkTheme;
     await HiveService.settings.put(HiveService.keyThemeDark, _isDarkTheme);
@@ -69,6 +80,21 @@ class UserProvider extends ChangeNotifier {
     _user = null;
     await HiveService.settings.put(HiveService.keyIsLogin, false);
     await HiveService.user.delete(HiveService.keyUser);
+    notifyListeners();
+  }
+
+  Future<void> deleteAccount() async {
+    await HiveService.habits.delete(HiveService.keyHabits);
+    await HiveService.progress.delete(HiveService.keyProgress);
+    await HiveService.settings.delete(HiveService.keyMoods);
+    await HiveService.settings.delete(HiveService.keyIsLogin);
+    await HiveService.settings.delete(HiveService.keyThemeDark);
+    await HiveService.settings.delete(HiveService.keyNotifications);
+    await HiveService.user.delete(HiveService.keyUser);
+
+    _user = null;
+    _isDarkTheme = false;
+    _notificationsEnabled = true;
     notifyListeners();
   }
 }

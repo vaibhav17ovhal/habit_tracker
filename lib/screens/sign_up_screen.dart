@@ -1,4 +1,5 @@
 import 'package:Demo/models/user.dart';
+import 'package:Demo/providers/dashboard_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
 import 'package:Demo/screens/dashboard_screen.dart';
 import 'package:Demo/screens/privacy_policy_screen.dart';
@@ -166,6 +167,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                         Helper.customToast('Registered Successfully');
                         provider.clearSignUpFields(context: context);
+                        context.read<DashboardProvider>().reset();
 
                         if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(

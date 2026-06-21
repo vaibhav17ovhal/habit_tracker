@@ -1,5 +1,7 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
+import 'package:Demo/providers/banner_quote_provider.dart';
 import 'package:Demo/providers/habits_provider.dart';
+import 'package:Demo/providers/mood_provider.dart';
 import 'package:Demo/providers/progress_provider.dart';
 import 'package:Demo/providers/splash_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
@@ -25,11 +27,15 @@ class _SplashScreenState extends State<SplashScreen> {
     final habitsProvider = context.read<HabitsProvider>();
     final userProvider = context.read<UserProvider>();
     final progressProvider = context.read<ProgressProvider>();
+    final moodProvider = context.read<MoodProvider>();
+    final bannerProvider = context.read<BannerQuoteProvider>();
     final splashProvider = context.read<SplashProvider>();
 
     await habitsProvider.loadFromStorage();
     await userProvider.loadFromStorage();
     await progressProvider.loadFromStorage();
+    await moodProvider.loadFromStorage();
+    await bannerProvider.loadForCurrentSlot();
 
     if (habitsProvider.totalCount > 0) {
       await progressProvider.seedSampleWeek(

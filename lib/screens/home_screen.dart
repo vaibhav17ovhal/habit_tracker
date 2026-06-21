@@ -212,8 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openMoodBottomSheet(BuildContext context) {
-    final moodProvider = context.read<MoodProvider>();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -223,8 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         return MoodBottomSheet();
       },
-    ).whenComplete(() {
-      moodProvider.clearMood();
-    });
+    ).whenComplete(() {});
   }
 }

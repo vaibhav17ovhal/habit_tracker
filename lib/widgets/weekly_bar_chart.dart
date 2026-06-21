@@ -40,7 +40,7 @@ class WeeklyBarChart extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           SizedBox(
-            height: 160,
+            height: 180,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: List.generate(7, (index) {

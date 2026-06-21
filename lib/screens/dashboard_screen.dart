@@ -1,5 +1,5 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
-import 'package:Demo/screens/habit_creation_screen.dart';
+import 'package:Demo/widgets/dashboard_fab_sheet.dart';
 import 'package:Demo/screens/dashboard_home_screen.dart';
 import 'package:Demo/screens/profile_screen.dart';
 import 'package:Demo/screens/progress_screen.dart';
@@ -30,14 +30,7 @@ class DashboardScreen extends StatelessWidget {
       body: screens[provider.currentIndex],
       floatingActionButton: provider.currentIndex == 0
           ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const HabitCreationScreen(),
-                  ),
-                );
-              },
+              onPressed: () => showDashboardFabSheet(context),
               backgroundColor: MyColors.primaryBlue,
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -72,7 +65,7 @@ class DashboardScreen extends StatelessWidget {
                   ? MyColors.primaryBlue
                   : MyColors.kDescriptionColor,
             ),
-            label: 'Dashboard',
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: SvgPicture.asset(

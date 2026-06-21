@@ -1,54 +1,61 @@
 import 'package:flutter/material.dart';
 
+import '../models/mood.dart';
+import '../services/hive_service.dart';
+
 class MoodProvider extends ChangeNotifier {
-  String selectedMood = "";
-  List<String> selectedActivities = [];
-  TextEditingController noteController = TextEditingController();
+  final List<MoodEntry> _entries = [];
 
-  final List<Map<String, dynamic>> moods = [
-    {"label": "Terrible", "emoji": "assets/icons/terrible_icon.gif"},
-    {"label": "Bad", "emoji": "assets/icons/bad_icon.gif"},
-    {"label": "Okay", "emoji": "assets/icons/okay_icon.gif"},
-    {"label": "Good", "emoji": "assets/icons/good_icon.gif"},
-    {"label": "Excellent", "emoji": "assets/icons/excellent_icon.gif"},
-  ];
+  List<MoodEntry> get entries => List.unmodifiable(_entries);
 
-  void selectMood(String mood) {
-    selectedMood = mood;
-    notifyListeners();
+  MoodEntry? get todayMood {
+    final now = DateTime.now();
+    for (final entry in _entries) {
+      if (_isSameDay(entry.date, now)) return entry;
+    }
+    return null;
   }
 
-  final List<String> activities = [
-    "Family",
-    "Friends",
-    "Love",
-    "Work",
-    "School",
-  ];
-
-
-  void toggleActivity(String activity) {
-    if (selectedActivities.contains(activity)) {
-      selectedActivities.remove(activity);
-    } else {
-      selectedActivities.add(activity);
+  Future<void> loadFromStorage() async {
+    _entries.clear();
+    final raw = HiveService.settings.get(HiveService.keyMoods);
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          _entries.add(MoodEntry.fromMap(item));
+        }
+      }
     }
     notifyListeners();
   }
 
-  void clearMood() {
-    selectedMood = "";
-    selectedActivities.clear();
-    noteController.clear();
+  Future<void> selectMood(String label, String emoji) async {
+    final now = DateTime.now();
+    _entries.removeWhere((e) => _isSameDay(e.date, now));
+    _entries.add(MoodEntry(date: now, label: label, emoji: emoji));
+    await _persist();
     notifyListeners();
   }
 
-  void saveMood() {
-    // 👉 Later connect Firebase / Hive / API here
-    debugPrint("Mood: $selectedMood");
-    debugPrint("Activities: $selectedActivities");
-    debugPrint("Note: ${noteController.text}");
-
-    clearMood();
+  List<MoodEntry?> weeklyMoods({DateTime? reference}) {
+    final now = reference ?? DateTime.now();
+    final start = now.subtract(Duration(days: now.weekday - 1));
+    return List.generate(7, (index) {
+      final day = DateTime(start.year, start.month, start.day + index);
+      for (final entry in _entries) {
+        if (_isSameDay(entry.date, day)) return entry;
+      }
+      return null;
+    });
   }
+
+  Future<void> _persist() async {
+    await HiveService.settings.put(
+      HiveService.keyMoods,
+      _entries.map((e) => e.toMap()).toList(),
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 }

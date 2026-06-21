@@ -1,9 +1,12 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
 import 'package:Demo/custom_widgets/custom_scaffold.dart';
 import 'package:Demo/providers/habits_provider.dart';
+import 'package:Demo/providers/mood_provider.dart';
 import 'package:Demo/providers/progress_provider.dart';
 import 'package:Demo/widgets/streak_calendar.dart';
+import 'package:Demo/widgets/today_water_drop_card.dart';
 import 'package:Demo/widgets/weekly_bar_chart.dart';
+import 'package:Demo/widgets/weekly_mood_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +18,9 @@ class ProgressScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final habitsProvider = context.watch<HabitsProvider>();
     final progressProvider = context.watch<ProgressProvider>();
+    final moodProvider = context.watch<MoodProvider>();
     final weekData = progressProvider.weeklyProgress();
+    final weekMoods = moodProvider.weeklyMoods();
     final completedDays = progressProvider.completedDaysInMonth();
     final monthlyRate = progressProvider.monthlyCompletionRate();
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -44,10 +49,18 @@ class ProgressScreen extends StatelessWidget {
             const SizedBox(height: 16),
             WeeklyBarChart(weekData: weekData),
             const SizedBox(height: 16),
+            WeeklyMoodChart(weekMoods: weekMoods),
+            const SizedBox(height: 16),
+            TodayWaterDropCard(
+              completedCount: habitsProvider.completedCount,
+              totalCount: habitsProvider.totalCount,
+            ),
+            const SizedBox(height: 16),
             StreakCalendar(
               month: DateTime.now(),
               completedDays: completedDays,
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
