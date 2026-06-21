@@ -6,7 +6,9 @@ import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/progress_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
 import 'package:Demo/widgets/app_bar_mood_chip.dart';
+import 'package:Demo/widgets/dashboard_greeting_banner.dart';
 import 'package:Demo/widgets/motivational_quote_banner.dart';
+import 'package:Demo/widgets/today_water_drop_card.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +23,7 @@ class DashboardHomeScreen extends StatelessWidget {
     final userProvider = context.watch<UserProvider>();
     final progressProvider = context.read<ProgressProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final progress = habitsProvider.progressFraction;
 
     return CustomScaffold(
       backgroundColor:
@@ -34,7 +37,7 @@ class DashboardHomeScreen extends StatelessWidget {
           'Habit Hero',
           style: GoogleFonts.poppins(
             fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             color: MyColors.primaryBlue,
           ),
         ),
@@ -58,6 +61,11 @@ class DashboardHomeScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 8),
               children: [
+                DashboardGreetingBanner(
+                  userName: userProvider.displayName,
+                  maxStreak: habitsProvider.maxStreak,
+                  progress: progress,
+                ),
                 const MotivationalQuoteBanner(),
                 if (habitsProvider.habits.isEmpty)
                   const _EmptyHabitsState()
@@ -80,7 +88,8 @@ class DashboardHomeScreen extends StatelessWidget {
           _ProgressSummaryBar(
             completed: habitsProvider.completedCount,
             total: habitsProvider.totalCount,
-            progress: habitsProvider.progressFraction,
+            progress: progress,
+            isDark: isDark,
           ),
         ],
       ),
@@ -92,20 +101,22 @@ class _ProgressSummaryBar extends StatelessWidget {
   final int completed;
   final int total;
   final double progress;
+  final bool isDark;
 
   const _ProgressSummaryBar({
     required this.completed,
     required this.total,
     required this.progress,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final percent = total == 0 ? 0 : (progress * 100).round();
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
         boxShadow: [
@@ -116,40 +127,52 @@ class _ProgressSummaryBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$completed/$total habits completed',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : MyColors.kBlackColor,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Today's Progress",
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: MyColors.kDescriptionColor,
+                  ),
                 ),
-              ),
-              Text(
-                '${(progress * 100).round()}%',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: MyColors.primaryBlue,
+                const SizedBox(height: 4),
+                Text(
+                  '$completed/$total habits completed',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : MyColors.kBlackColor,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  '$percent% complete',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: MyColors.primaryBlue,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: total == 0 ? 0 : progress,
-              minHeight: 8,
-              backgroundColor: MyColors.neutralGray,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                MyColors.primaryBlue,
-              ),
+          SizedBox(
+            width: 78,
+            height: 104,
+            child: AnimatedWaterDropIndicator(
+              fillLevel: progress,
+              fillLabel: '$percent%',
+              isDark: isDark,
+              width: 78,
+              height: 104,
+              labelFontSize: 14,
+              labelTopRatio: 0.30,
             ),
           ),
         ],
@@ -189,6 +212,7 @@ class _EmptyHabitsState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 14,
+              fontWeight: FontWeight.w400,
               color: MyColors.kDescriptionColor,
             ),
           ),

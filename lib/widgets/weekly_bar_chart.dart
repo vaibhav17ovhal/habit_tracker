@@ -26,6 +26,13 @@ class WeeklyBarChart extends StatelessWidget {
               ? Colors.white12
               : MyColors.neutralGray.withValues(alpha: 0.9),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,15 +70,10 @@ class WeeklyBarChart extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
+                        _LiquidBar(
                           height: barHeight < 8 ? 8 : barHeight,
-                          decoration: BoxDecoration(
-                            color: isToday
-                                ? MyColors.primaryBlue
-                                : MyColors.primaryBlue.withValues(alpha: 0.55),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          isToday: isToday,
+                          isDark: isDark,
                         ),
                         const SizedBox(height: 10),
                         Text(
@@ -79,7 +81,7 @@ class WeeklyBarChart extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             fontWeight:
-                                isToday ? FontWeight.w700 : FontWeight.w500,
+                                isToday ? FontWeight.w600 : FontWeight.w400,
                             color: isToday
                                 ? MyColors.primaryBlue
                                 : MyColors.kDescriptionColor,
@@ -102,5 +104,64 @@ class WeeklyBarChart extends StatelessWidget {
     return date.year == now.year &&
         date.month == now.month &&
         date.day == now.day;
+  }
+}
+
+class _LiquidBar extends StatelessWidget {
+  final double height;
+  final bool isToday;
+  final bool isDark;
+
+  const _LiquidBar({
+    required this.height,
+    required this.isToday,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isToday
+              ? [
+                  const Color(0xFF93C5FD),
+                  MyColors.primaryBlue,
+                  const Color(0xFF1D4ED8),
+                ]
+              : [
+                  MyColors.primaryBlue.withValues(alpha: 0.55),
+                  MyColors.primaryBlue.withValues(alpha: 0.35),
+                ],
+        ),
+        boxShadow: isToday
+            ? [
+                BoxShadow(
+                  color: MyColors.primaryBlue.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.center,
+          colors: [
+            Colors.white.withValues(alpha: isToday ? 0.28 : 0.12),
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
   }
 }

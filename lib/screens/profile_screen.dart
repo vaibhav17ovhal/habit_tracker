@@ -13,6 +13,8 @@ import 'package:Demo/screens/privacy_policy_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/screens/terms_and_condition_screen.dart';
 import 'package:Demo/services/hive_service.dart';
+import 'package:Demo/utils/app_page_route.dart';
+import 'package:Demo/widgets/animated_theme_toggle.dart';
 import 'package:Demo/widgets/profile_gamification_card.dart';
 import 'package:Demo/widgets/profile_leaderboard_section.dart';
 import 'package:flutter/material.dart';
@@ -106,11 +108,11 @@ class ProfileScreen extends StatelessWidget {
                 _SettingsTile(
                   icon: Icons.dark_mode_outlined,
                   title: 'Dark Theme',
-                  trailing: Switch.adaptive(
-                    value: userProvider.isDarkTheme,
-                    activeThumbColor: MyColors.primaryBlue,
+                  trailing: AnimatedThemeToggle(
+                    isDark: userProvider.isDarkTheme,
                     onChanged: (_) => userProvider.toggleTheme(),
                   ),
+                  showChevron: false,
                 ),
                 _SettingsTile(
                   icon: Icons.notifications_outlined,
@@ -215,7 +217,7 @@ class ProfileScreen extends StatelessWidget {
     if (!context.mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const SignInScreen()),
+      AppPageRoute(page: const SignInScreen()),
       (_) => false,
     );
   }
@@ -257,7 +259,7 @@ class ProfileScreen extends StatelessWidget {
     if (!context.mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const SignInScreen()),
+      AppPageRoute(page: const SignInScreen()),
       (_) => false,
     );
   }

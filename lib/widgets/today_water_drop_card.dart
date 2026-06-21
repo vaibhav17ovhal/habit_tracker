@@ -106,7 +106,7 @@ class TodayWaterDropCard extends StatelessWidget {
           SizedBox(
             width: 130,
             height: 175,
-            child: _AnimatedWaterDrop(
+            child: AnimatedWaterDropIndicator(
               fillLevel: _fillPercent,
               fillLabel: totalCount == 0 ? '0%' : '$_fillPercentage%',
               isDark: isDark,
@@ -118,22 +118,32 @@ class TodayWaterDropCard extends StatelessWidget {
   }
 }
 
-class _AnimatedWaterDrop extends StatefulWidget {
+class AnimatedWaterDropIndicator extends StatefulWidget {
   final double fillLevel;
-  final String fillLabel;
+  final String? fillLabel;
   final bool isDark;
+  final double width;
+  final double height;
+  final double labelFontSize;
+  final double labelTopRatio;
 
-  const _AnimatedWaterDrop({
+  const AnimatedWaterDropIndicator({
+    super.key,
     required this.fillLevel,
-    required this.fillLabel,
+    this.fillLabel,
     required this.isDark,
+    this.width = 130,
+    this.height = 175,
+    this.labelFontSize = 22,
+    this.labelTopRatio = 0.29,
   });
 
   @override
-  State<_AnimatedWaterDrop> createState() => _AnimatedWaterDropState();
+  State<AnimatedWaterDropIndicator> createState() =>
+      _AnimatedWaterDropIndicatorState();
 }
 
-class _AnimatedWaterDropState extends State<_AnimatedWaterDrop>
+class _AnimatedWaterDropIndicatorState extends State<AnimatedWaterDropIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _waveController;
 
@@ -158,6 +168,8 @@ class _AnimatedWaterDropState extends State<_AnimatedWaterDrop>
       animation: _waveController,
       builder: (context, _) {
         final wavePhase = _waveController.value * math.pi * 2;
+        final bob = math.sin(wavePhase * 0.6) * 1.2;
+        final labelTop = widget.height * widget.labelTopRatio + bob;
 
         return TweenAnimationBuilder<double>(
           tween: Tween<double>(end: widget.fillLevel),
@@ -169,9 +181,9 @@ class _AnimatedWaterDropState extends State<_AnimatedWaterDrop>
               alignment: Alignment.topCenter,
               children: [
                 Transform.translate(
-                  offset: Offset(0, math.sin(wavePhase * 0.6) * 1.2),
+                  offset: Offset(0, bob),
                   child: CustomPaint(
-                    size: const Size(130, 175),
+                    size: Size(widget.width, widget.height),
                     painter: WaterDropPainter(
                       fillLevel: fill,
                       wavePhase: wavePhase,
@@ -179,27 +191,29 @@ class _AnimatedWaterDropState extends State<_AnimatedWaterDrop>
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 50 + math.sin(wavePhase * 0.6) * 1.2,
-                  child: Text(
-                    widget.fillLabel,
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: fill >= 0.38
-                          ? Colors.white
-                          : const Color(0xFF1E40AF),
-                      shadows: fill >= 0.38
-                          ? [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.35),
-                                blurRadius: 4,
-                              ),
-                            ]
-                          : null,
+                if (widget.fillLabel != null)
+                  Positioned(
+                    top: labelTop,
+                    child: Text(
+                      widget.fillLabel!,
+                      style: GoogleFonts.poppins(
+                        fontSize: widget.labelFontSize,
+                        fontWeight: FontWeight.w800,
+                        color: fill >= 0.38
+                            ? Colors.white
+                            : const Color(0xFF1E40AF),
+                        shadows: fill >= 0.38
+                            ? [
+                                Shadow(
+                                  color:
+                                      Colors.black.withValues(alpha: 0.35),
+                                  blurRadius: 4,
+                                ),
+                              ]
+                            : null,
+                      ),
                     ),
                   ),
-                ),
               ],
             );
           },

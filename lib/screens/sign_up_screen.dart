@@ -2,6 +2,7 @@ import 'package:Demo/models/user.dart';
 import 'package:Demo/providers/dashboard_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
 import 'package:Demo/screens/dashboard_screen.dart';
+import 'package:Demo/utils/app_page_route.dart';
 import 'package:Demo/screens/privacy_policy_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/screens/terms_and_condition_screen.dart';
@@ -172,9 +173,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const DashboardScreen(),
-                          ),
+                          AppPageRoute(page: const DashboardScreen()),
                           (route) => false,
                         );
                       } else {

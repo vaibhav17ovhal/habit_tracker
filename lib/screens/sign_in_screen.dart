@@ -13,6 +13,7 @@ import '../custom_widgets/custom_colors.dart';
 import '../custom_widgets/custom_font_family.dart';
 import '../custom_widgets/custom_scaffold.dart';
 import '../custom_widgets/custom_text_field.dart';
+import '../utils/app_page_route.dart';
 import 'dashboard_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -140,11 +141,10 @@ class _SignInScreenState extends State<SignInScreen> {
                         context.read<DashboardProvider>().reset();
 
                         if (!context.mounted) return;
-                        Navigator.pushReplacement(
+                        Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const DashboardScreen(),
-                          ),
+                          AppPageRoute(page: const DashboardScreen()),
+                          (_) => false,
                         );
                       }
                     },

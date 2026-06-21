@@ -28,18 +28,30 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: _reminderTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: MyColors.primaryBlue,
-                ),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context, child) => _themedPicker(context, child),
     );
     if (picked != null) setState(() => _reminderTime = picked);
+  }
+
+  Widget _themedPicker(BuildContext context, Widget? child) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: MyColors.primaryBlue,
+          primary: MyColors.primaryBlue,
+          secondary: MyColors.accentYellow,
+          surface: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
+          brightness: isDark ? Brightness.dark : Brightness.light,
+        ),
+        dialogTheme: DialogThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+      child: child!,
+    );
   }
 
   Future<void> _pickDate({
@@ -53,16 +65,7 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
       initialDate: initial,
       firstDate: min ?? DateTime(2020),
       lastDate: max ?? DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: MyColors.primaryBlue,
-                ),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context, child) => _themedPicker(context, child),
     );
     if (picked == null) return;
 
@@ -83,10 +86,14 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please select a habit',
-            style: GoogleFonts.poppins(),
+            'Pick a habit to start your journey — you\'ve got this! 💪',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
           ),
           backgroundColor: MyColors.primaryBlue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -96,10 +103,14 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'End date must be after start date',
-            style: GoogleFonts.poppins(),
+            'Choose an end date after your start date to keep your journey on track.',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
           ),
           backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -172,60 +183,25 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
                 final template = kHabitTemplates[index];
                 final isSelected = _selectedIndex == index;
 
-                return GestureDetector(
+                return _HabitTemplateTile(
+                  template: template,
+                  isSelected: isSelected,
+                  isDark: isDark,
                   onTap: () => setState(() => _selectedIndex = index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: template.color.withValues(
-                        alpha: isSelected ? 0.25 : 0.12,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? template.color
-                            : template.color.withValues(alpha: 0.3),
-                        width: isSelected ? 2.5 : 1,
-                      ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: template.color.withValues(alpha: 0.25),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: SvgPicture.asset(
-                            template.iconPath,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          template.name,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : MyColors.kBlackColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               },
             ),
             const SizedBox(height: 24),
             _sectionTitle('Start & End Date'),
+            Text(
+              'Choose your start date to begin your journey!',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: MyColors.kDescriptionColor,
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -340,6 +316,93 @@ class _HabitCreationScreenState extends State<HabitCreationScreen> {
   }
 }
 
+class _HabitTemplateTile extends StatefulWidget {
+  final HabitTemplate template;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _HabitTemplateTile({
+    required this.template,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<_HabitTemplateTile> createState() => _HabitTemplateTileState();
+}
+
+class _HabitTemplateTileState extends State<_HabitTemplateTile> {
+  double _scale = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.94),
+      onTapUp: (_) {
+        setState(() => _scale = 1);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutBack,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: widget.template.color.withValues(
+              alpha: widget.isSelected ? 0.25 : 0.12,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: widget.isSelected
+                  ? widget.template.color
+                  : widget.template.color.withValues(alpha: 0.3),
+              width: widget.isSelected ? 2.5 : 1,
+            ),
+            boxShadow: widget.isSelected
+                ? [
+                    BoxShadow(
+                      color: widget.template.color.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: SvgPicture.asset(
+                  widget.template.iconPath,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.template.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: widget.isDark ? Colors.white : MyColors.kBlackColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DateTile extends StatelessWidget {
   final String label;
   final String value;
@@ -363,7 +426,7 @@ class _DateTile extends StatelessWidget {
           color: isDark ? const Color(0xFF1F2937) : MyColors.kWhiteColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark ? Colors.white12 : MyColors.neutralGray,
+            color: MyColors.primaryBlue.withValues(alpha: 0.25),
           ),
         ),
         child: Column(
@@ -373,15 +436,26 @@ class _DateTile extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                color: MyColors.kDescriptionColor,
+                fontWeight: FontWeight.w500,
+                color: MyColors.primaryBlue,
               ),
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 16, color: MyColors.primaryBlue),
-                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: MyColors.accentYellow.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_today_rounded,
+                    size: 14,
+                    color: Color(0xFFB45309),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     value,

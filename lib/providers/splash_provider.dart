@@ -2,6 +2,7 @@ import 'package:Demo/screens/dashboard_screen.dart';
 import 'package:Demo/screens/onboarding_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/services/hive_service.dart';
+import 'package:Demo/utils/app_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -35,7 +36,7 @@ class SplashProvider extends ChangeNotifier {
     if (isLogin) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        AppPageRoute(page: const DashboardScreen()),
       );
       return;
     }

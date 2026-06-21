@@ -2,6 +2,7 @@ import 'package:Demo/custom_widgets/custom_colors.dart';
 import 'package:Demo/models/mood.dart';
 import 'package:Demo/providers/mood_provider.dart';
 import 'package:Demo/screens/habit_creation_screen.dart';
+import 'package:Demo/utils/app_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -52,7 +53,7 @@ void showMoodPickerSheet(BuildContext context) {
                   'How are you feeling today?',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white : MyColors.kBlackColor,
                   ),
                 ),
@@ -62,8 +63,10 @@ void showMoodPickerSheet(BuildContext context) {
                   runSpacing: 10,
                   children: kMoodOptions.map((option) {
                     final isSelected = today?.label == option.label;
-
-                    return GestureDetector(
+                    return _AnimatedMoodOption(
+                      option: option,
+                      isSelected: isSelected,
+                      isDark: isDark,
                       onTap: () async {
                         await moodProvider.selectMood(
                           option.label,
@@ -71,42 +74,6 @@ void showMoodPickerSheet(BuildContext context) {
                         );
                         if (context.mounted) Navigator.pop(context);
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 72,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? MyColors.primaryBlue.withValues(alpha: 0.12)
-                              : (isDark
-                                  ? const Color(0xFF374151)
-                                  : MyColors.neutralGray),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isSelected
-                                ? MyColors.primaryBlue
-                                : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(option.emoji,
-                                style: const TextStyle(fontSize: 28)),
-                            const SizedBox(height: 4),
-                            Text(
-                              option.label,
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? MyColors.primaryBlue
-                                    : MyColors.kDescriptionColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     );
                   }).toList(),
                 ),
@@ -117,6 +84,135 @@ void showMoodPickerSheet(BuildContext context) {
       );
     },
   );
+}
+
+class _AnimatedMoodOption extends StatefulWidget {
+  final MoodOption option;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _AnimatedMoodOption({
+    required this.option,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedMoodOption> createState() => _AnimatedMoodOptionState();
+}
+
+class _AnimatedMoodOptionState extends State<_AnimatedMoodOption>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController;
+  double _tapScale = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    if (widget.isSelected) {
+      _bounceController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedMoodOption oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected && !oldWidget.isSelected) {
+      _bounceController.repeat(reverse: true);
+    } else if (!widget.isSelected && oldWidget.isSelected) {
+      _bounceController.stop();
+      _bounceController.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    setState(() => _tapScale = 0.88);
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (mounted) setState(() => _tapScale = 1);
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedScale(
+        scale: _tapScale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutBack,
+        child: AnimatedBuilder(
+          animation: _bounceController,
+          builder: (context, child) {
+            final bounce = widget.isSelected
+                ? 1 + (_bounceController.value * 0.08)
+                : 1.0;
+            return Transform.scale(
+              scale: bounce,
+              child: child,
+            );
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            width: 72,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? MyColors.primaryBlue.withValues(alpha: 0.12)
+                  : (widget.isDark
+                      ? const Color(0xFF374151)
+                      : MyColors.neutralGray),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: widget.isSelected
+                    ? MyColors.primaryBlue
+                    : Colors.transparent,
+                width: 2,
+              ),
+              boxShadow: widget.isSelected
+                  ? [
+                      BoxShadow(
+                        color: MyColors.primaryBlue.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              children: [
+                Text(widget.option.emoji,
+                    style: const TextStyle(fontSize: 28)),
+                const SizedBox(height: 4),
+                Text(
+                  widget.option.label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isSelected
+                        ? MyColors.primaryBlue
+                        : MyColors.kDescriptionColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DashboardFabSheet extends StatelessWidget {
@@ -153,7 +249,7 @@ class _DashboardFabSheet extends StatelessWidget {
                   'Quick Actions',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white : MyColors.kBlackColor,
                   ),
                 ),
@@ -167,9 +263,7 @@ class _DashboardFabSheet extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const HabitCreationScreen(),
-                      ),
+                      AppPageRoute(page: const HabitCreationScreen()),
                     );
                   },
                 ),
@@ -250,6 +344,7 @@ class _FabOptionTile extends StatelessWidget {
                       subtitle,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
+                        fontWeight: FontWeight.w400,
                         color: MyColors.kDescriptionColor,
                       ),
                     ),

@@ -1,6 +1,7 @@
 import 'package:Demo/custom_widgets/custom_colors.dart';
 import 'package:Demo/models/leaderboard_entry.dart';
 import 'package:Demo/screens/leaderboard_screen.dart';
+import 'package:Demo/utils/app_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -78,9 +79,7 @@ class ProfileLeaderboardSection extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const LeaderboardScreen(),
-                      ),
+                      AppPageRoute(page: const LeaderboardScreen()),
                     );
                   },
                   borderRadius: BorderRadius.circular(12),
