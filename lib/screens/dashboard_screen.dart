@@ -30,8 +30,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HabitsProvider>().fetchFromApi();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await context.read<HabitsProvider>().fetchFromApi();
+      } catch (_) {
+        await context.read<HabitsProvider>().loadFromStorage();
+      }
     });
   }
 

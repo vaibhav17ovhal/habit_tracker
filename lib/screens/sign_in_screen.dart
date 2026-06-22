@@ -2,6 +2,7 @@ import 'package:Demo/providers/dashboard_provider.dart';
 import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/login_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
+import 'package:Demo/screens/profile_setup_screen.dart';
 import 'package:Demo/screens/sign_up_screen.dart';
 import 'package:Demo/services/api_service.dart';
 import 'package:dotted_line/dotted_line.dart';
@@ -145,15 +146,22 @@ class _SignInScreenState extends State<SignInScreen> {
                         );
 
                         await userProvider.saveFromApiUser(auth.user);
-                        await habitsProvider.fetchFromApi();
+                        try {
+                          await habitsProvider.fetchFromApi();
+                        } catch (_) {
+                          await habitsProvider.loadFromStorage();
+                        }
 
                         provider.clearFields();
                         context.read<DashboardProvider>().reset();
 
                         if (!context.mounted) return;
+                        final nextScreen = userProvider.isProfileSetupComplete
+                            ? const DashboardScreen()
+                            : const ProfileSetupScreen();
                         Navigator.pushAndRemoveUntil(
                           context,
-                          AppPageRoute(page: const DashboardScreen()),
+                          AppPageRoute(page: nextScreen),
                           (_) => false,
                         );
                       } catch (e) {

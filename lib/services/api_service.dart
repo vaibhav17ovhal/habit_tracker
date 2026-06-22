@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_config.dart';
+import 'api_urls.dart';
 import 'token_storage.dart';
 
 class ApiException implements Exception {
@@ -134,7 +135,7 @@ class ApiService {
     String? body,
     bool auth = false,
   }) async {
-    final url = '${ApiConfig.baseUrl}$path';
+    final url = ApiUrls.url(path);
     final requestHeaders = auth ? await _authHeaders() : _jsonHeaders;
 
     _log('────────────────────────────────────────');
@@ -202,7 +203,7 @@ class ApiService {
 
   String _networkErrorMessage(Object error) {
     final text = error.toString().toLowerCase();
-    final url = ApiConfig.baseUrl;
+    final url = ApiUrls.baseUrl;
 
     if (text.contains('connection timed out') ||
         text.contains('connection refused') ||
@@ -232,7 +233,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'POST',
-      path: '/signup',
+      path: ApiUrls.signup,
       body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
 
@@ -259,7 +260,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'POST',
-      path: '/login',
+      path: ApiUrls.login,
       body: jsonEncode({'email': email, 'password': password}),
     );
 
@@ -285,7 +286,7 @@ class ApiService {
         await _send(
           label: label,
           method: 'POST',
-          path: '/logout',
+          path: ApiUrls.logout,
           auth: true,
         );
       }
@@ -303,12 +304,59 @@ class ApiService {
     await _send(
       label: label,
       method: 'DELETE',
-      path: '/delete-account',
+      path: ApiUrls.deleteAccount,
       auth: true,
     );
 
     await TokenStorage.deleteToken();
     _log('[$label] Account deleted; JWT cleared from secure storage');
+  }
+
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> completeProfile(
+    Map<String, dynamic> profileData,
+  ) async {
+    const label = 'PROFILE SETUP';
+
+    final body = await _send(
+      label: label,
+      method: 'POST',
+      path: ApiUrls.profileSetup,
+      auth: true,
+      body: jsonEncode(profileData),
+    );
+
+    return Map<String, dynamic>.from(body['user'] as Map? ?? {});
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    const label = 'GET PROFILE';
+
+    final body = await _send(
+      label: label,
+      method: 'GET',
+      path: ApiUrls.profile,
+      auth: true,
+    );
+
+    return Map<String, dynamic>.from(body['user'] as Map? ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateProfile(
+    Map<String, dynamic> profileData,
+  ) async {
+    const label = 'UPDATE PROFILE';
+
+    final body = await _send(
+      label: label,
+      method: 'PUT',
+      path: ApiUrls.profile,
+      auth: true,
+      body: jsonEncode(profileData),
+    );
+
+    return Map<String, dynamic>.from(body['user'] as Map? ?? {});
   }
 
   // ── Habits ────────────────────────────────────────────────────────────────
@@ -319,7 +367,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'POST',
-      path: '/habits',
+      path: ApiUrls.habits,
       auth: true,
       body: jsonEncode(habitData),
     );
@@ -333,7 +381,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'GET',
-      path: '/habits',
+      path: ApiUrls.habits,
       auth: true,
     );
 
@@ -352,7 +400,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'GET',
-      path: '/habits/$id',
+      path: ApiUrls.habitById(id),
       auth: true,
     );
 
@@ -365,7 +413,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'PATCH',
-      path: '/habits/$id/complete',
+      path: ApiUrls.habitComplete(id),
       auth: true,
     );
 
@@ -378,7 +426,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'PATCH',
-      path: '/habits/$id/break',
+      path: ApiUrls.habitBreak(id),
       auth: true,
     );
 
@@ -394,7 +442,7 @@ class ApiService {
     final body = await _send(
       label: label,
       method: 'PUT',
-      path: '/habits/$id',
+      path: ApiUrls.habitById(id),
       auth: true,
       body: jsonEncode(habitData),
     );
@@ -408,7 +456,7 @@ class ApiService {
     await _send(
       label: label,
       method: 'DELETE',
-      path: '/habits/$id',
+      path: ApiUrls.habitById(id),
       auth: true,
     );
   }

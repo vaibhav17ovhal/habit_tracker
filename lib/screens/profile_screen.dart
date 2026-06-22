@@ -16,6 +16,7 @@ import 'package:Demo/utils/auth_navigation.dart';
 import 'package:Demo/widgets/animated_theme_toggle.dart';
 import 'package:Demo/widgets/profile_gamification_card.dart';
 import 'package:Demo/widgets/profile_leaderboard_section.dart';
+import 'package:Demo/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -296,10 +297,7 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundImage: AssetImage(avatarPath),
-              ),
+              UserAvatar(imagePath: avatarPath, radius: 44),
               Positioned(
                 bottom: 0,
                 right: 0,

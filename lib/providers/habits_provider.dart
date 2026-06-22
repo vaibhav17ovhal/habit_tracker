@@ -75,6 +75,8 @@ class HabitsProvider extends ChangeNotifier {
           }),
         );
       await _persist();
+    } catch (_) {
+      await loadFromStorage();
     } finally {
       _isLoading = false;
       notifyListeners();

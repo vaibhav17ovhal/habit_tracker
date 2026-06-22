@@ -1,7 +1,5 @@
-import 'package:Demo/providers/dashboard_provider.dart';
-import 'package:Demo/providers/habits_provider.dart';
 import 'package:Demo/providers/user_provider.dart';
-import 'package:Demo/screens/dashboard_screen.dart';
+import 'package:Demo/screens/profile_setup_screen.dart';
 import 'package:Demo/services/api_service.dart';
 import 'package:Demo/utils/app_page_route.dart';
 import 'package:Demo/screens/privacy_policy_screen.dart';
@@ -171,7 +169,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       try {
                         final userProvider = context.read<UserProvider>();
-                        final habitsProvider = context.read<HabitsProvider>();
                         final name =
                             '${provider.firstNameController.text.trim()} ${provider.lastNameController.text.trim()}';
                         final email =
@@ -186,16 +183,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         );
 
                         await userProvider.saveFromApiUser(auth.user);
-                        await habitsProvider.fetchFromApi();
 
                         Helper.customToast('Registered Successfully');
                         provider.clearSignUpFields(context: context);
-                        context.read<DashboardProvider>().reset();
 
                         if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
-                          AppPageRoute(page: const DashboardScreen()),
+                          AppPageRoute(page: const ProfileSetupScreen()),
                           (route) => false,
                         );
                       } catch (e) {

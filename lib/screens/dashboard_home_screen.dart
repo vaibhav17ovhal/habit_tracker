@@ -12,10 +12,12 @@ import 'package:Demo/widgets/app_bar_mood_chip.dart';
 import 'package:Demo/widgets/bad_habit_card.dart';
 import 'package:Demo/widgets/dashboard_greeting_banner.dart';
 import 'package:Demo/widgets/habit_card_menu.dart';
-import 'package:Demo/widgets/motivational_quote_banner.dart';
+import 'package:Demo/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
+import '../widgets/motivational_quote_banner.dart';
 
 class DashboardHomeScreen extends StatelessWidget {
   const DashboardHomeScreen({super.key});
@@ -53,9 +55,9 @@ class DashboardHomeScreen extends StatelessWidget {
             onTap: () => dashboardProvider.changeIndex(3),
             child: Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: CircleAvatar(
+              child: UserAvatar(
+                imagePath: userProvider.user?.avatarPath ?? userProvider.avatarPath,
                 radius: 20,
-                backgroundImage: AssetImage(userProvider.avatarPath),
               ),
             ),
           ),

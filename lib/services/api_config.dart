@@ -11,6 +11,9 @@ enum ApiDeviceMode {
   physicalDevice,
 }
 
+/// Device and environment settings for reaching the Habit Hero backend.
+///
+/// API route paths are defined in [ApiUrls].
 class ApiConfig {
   static const int port = 5000;
 

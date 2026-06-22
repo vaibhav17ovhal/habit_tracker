@@ -1,5 +1,6 @@
 import 'package:Demo/screens/dashboard_screen.dart';
 import 'package:Demo/screens/onboarding_screen.dart';
+import 'package:Demo/screens/profile_setup_screen.dart';
 import 'package:Demo/screens/sign_in_screen.dart';
 import 'package:Demo/services/hive_service.dart';
 import 'package:Demo/services/token_storage.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'dashboard_provider.dart';
+import 'user_provider.dart';
 
 class SplashProvider extends ChangeNotifier {
   Future<void> navigateToNextScreen(BuildContext context) async {
@@ -36,9 +38,15 @@ class SplashProvider extends ChangeNotifier {
     }
 
     if (hasToken && isLogin) {
+      final profileComplete =
+          context.read<UserProvider>().isProfileSetupComplete;
       Navigator.pushReplacement(
         context,
-        AppPageRoute(page: const DashboardScreen()),
+        AppPageRoute(
+          page: profileComplete
+              ? const DashboardScreen()
+              : const ProfileSetupScreen(),
+        ),
       );
       return;
     }
