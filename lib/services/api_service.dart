@@ -460,6 +460,31 @@ class ApiService {
       auth: true,
     );
   }
+
+  // ── Progress ──────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getProgressCalendar({
+    int? year,
+    int? month,
+    String? today,
+  }) async {
+    const label = 'GET PROGRESS CALENDAR';
+
+    final body = await _send(
+      label: label,
+      method: 'GET',
+      path: ApiUrls.progressCalendarPath(
+        year: year,
+        month: month,
+        today: today,
+      ),
+      auth: true,
+    );
+
+    final days = body['days'];
+    _log('[$label] Parsed ${days is List ? days.length : 0} day(s)');
+    return Map<String, dynamic>.from(body);
+  }
 }
 
 void showApiErrorSnackBar(BuildContext context, Object error) {

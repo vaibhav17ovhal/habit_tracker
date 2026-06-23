@@ -23,7 +23,12 @@ class ProgressScreen extends StatelessWidget {
     final weekData = progressProvider.weeklyProgress();
     final weekMoods = moodProvider.weeklyMoods();
     final completedDays = progressProvider.completedDaysInMonth();
-    final monthlyRate = progressProvider.monthlyCompletionRate();
+    final monthlyRate = progressProvider.monthlyCompletionRate > 0
+        ? progressProvider.monthlyCompletionRate
+        : progressProvider.monthlyCompletionRateFromRecords();
+    final bestStreak = progressProvider.bestStreak > 0
+        ? progressProvider.bestStreak
+        : habitsProvider.maxStreak;
     final badHabits = habitsProvider.badHabits;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -43,7 +48,7 @@ class ProgressScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StatsRow(
-              maxStreak: habitsProvider.maxStreak,
+              maxStreak: bestStreak,
               completedToday: habitsProvider.completedCount,
               totalHabits: habitsProvider.totalCount,
               monthlyRate: monthlyRate,

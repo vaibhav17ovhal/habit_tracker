@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../providers/dashboard_provider.dart';
 import 'badges_and_rewards_screen.dart';
 import '../providers/habits_provider.dart';
+import '../providers/progress_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,10 +32,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final habitsProvider = context.read<HabitsProvider>();
+      final progressProvider = context.read<ProgressProvider>();
       try {
-        await context.read<HabitsProvider>().fetchFromApi();
+        await habitsProvider.fetchFromApi();
+        await habitsProvider.syncProgress(progressProvider);
       } catch (_) {
-        await context.read<HabitsProvider>().loadFromStorage();
+        await habitsProvider.loadFromStorage();
+        await progressProvider.syncFromHabits(habitsProvider.goodHabits);
       }
     });
   }

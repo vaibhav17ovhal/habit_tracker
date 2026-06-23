@@ -4,6 +4,7 @@ import '../models/habit.dart';
 import '../services/api_service.dart';
 import '../services/hive_service.dart';
 import '../services/token_storage.dart';
+import '../utils/streak_utils.dart';
 import 'progress_provider.dart';
 
 class HabitsProvider extends ChangeNotifier {
@@ -28,6 +29,10 @@ class HabitsProvider extends ChangeNotifier {
 
   int get maxStreak => goodHabits.isEmpty
       ? 0
+      : goodHabits.map((h) => h.longestStreak).reduce((a, b) => a > b ? a : b);
+
+  int get currentBestStreak => goodHabits.isEmpty
+      ? 0
       : goodHabits.map((h) => h.streak).reduce((a, b) => a > b ? a : b);
 
   int get maxBadHabitDaysOnTarget => badHabits.isEmpty
@@ -47,6 +52,7 @@ class HabitsProvider extends ChangeNotifier {
         if (item is Map) {
           final habit = Habit.fromMap(item);
           _syncTodayState(habit);
+          if (!habit.isBadHabit) habit.refreshStreakFields();
           _habits.add(habit);
         }
       }
@@ -81,6 +87,31 @@ class HabitsProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> syncProgress(ProgressProvider progressProvider) async {
+    if (await TokenStorage.hasToken()) {
+      try {
+        final data = await _api.getProgressCalendar(
+          today: StreakUtils.todayKey,
+        );
+        final days = data['days'];
+        if (days is List) {
+          await progressProvider.applyCalendarDays(
+            days
+                .map((item) => Map<String, dynamic>.from(item as Map))
+                .toList(),
+            replaceExisting: true,
+          );
+        }
+        await progressProvider.applySummary(data);
+        return;
+      } catch (_) {
+        // Fall back to local habit history.
+      }
+    }
+
+    await progressProvider.syncFromHabits(goodHabits);
   }
 
   Future<Habit?> getHabitById(String id) async {
@@ -201,28 +232,16 @@ class HabitsProvider extends ChangeNotifier {
             habit.isCompletedToday = true;
           }
         } else {
-          habit.isCompletedToday = false;
-          if (habit.streak > 0) habit.streak -= 1;
+          _toggleLocalCompletion(habit, completed: false);
         }
       } else {
-        final wasCompleted = habit.isCompletedToday;
-        habit.isCompletedToday = !wasCompleted;
-
-        if (!wasCompleted) {
-          habit.streak += 1;
-        } else if (habit.streak > 0) {
-          habit.streak -= 1;
-        }
+        _toggleLocalCompletion(habit, completed: !habit.isCompletedToday);
       }
 
       await _persist();
 
       if (progressProvider != null) {
-        await progressProvider.recordDay(
-          date: DateTime.now(),
-          completedCount: completedCount,
-          totalCount: totalCount,
-        );
+        await syncProgress(progressProvider);
       }
     } finally {
       _isSyncing = false;
@@ -339,6 +358,18 @@ class HabitsProvider extends ChangeNotifier {
       default:
         return habit.name.toLowerCase();
     }
+  }
+
+  void _toggleLocalCompletion(Habit habit, {required bool completed}) {
+    final today = StreakUtils.todayKey;
+    if (completed) {
+      if (!habit.completedDates.contains(today)) {
+        habit.completedDates.add(today);
+      }
+    } else {
+      habit.completedDates.remove(today);
+    }
+    habit.refreshStreakFields();
   }
 
   void _syncTodayState(Habit habit) {

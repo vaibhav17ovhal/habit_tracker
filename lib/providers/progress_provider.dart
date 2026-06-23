@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../models/habit.dart';
 import '../models/progress.dart';
 import '../services/hive_service.dart';
+import '../utils/streak_utils.dart';
 
 class ProgressProvider extends ChangeNotifier {
   final List<DailyProgress> _records = [];
+  int _bestStreak = 0;
+  int _activeDayStreak = 0;
+  double _monthlyCompletionRate = 0;
 
   List<DailyProgress> get records => List.unmodifiable(_records);
+  int get bestStreak => _bestStreak;
+  int get activeDayStreak => _activeDayStreak;
+  double get monthlyCompletionRate => _monthlyCompletionRate;
 
   Future<void> loadFromStorage() async {
     _records.clear();
@@ -19,6 +27,122 @@ class ProgressProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  Future<void> applyCalendarDays(
+    List<Map<String, dynamic>> days, {
+    bool replaceExisting = false,
+  }) async {
+    if (replaceExisting) {
+      _records.clear();
+    }
+
+    for (final day in days) {
+      final dateKey = day['date']?.toString();
+      if (dateKey == null || dateKey.isEmpty) continue;
+
+      final parsed = DateTime.tryParse(dateKey);
+      if (parsed == null) continue;
+
+      final normalized = DateTime(parsed.year, parsed.month, parsed.day);
+      _records.removeWhere(
+        (r) =>
+            r.date.year == normalized.year &&
+            r.date.month == normalized.month &&
+            r.date.day == normalized.day,
+      );
+      _records.add(
+        DailyProgress(
+          date: normalized,
+          completedCount: (day['completedCount'] as num?)?.toInt() ?? 0,
+          totalCount: (day['totalCount'] as num?)?.toInt() ?? 0,
+        ),
+      );
+    }
+
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> applySummary(Map<String, dynamic> summary) async {
+    _bestStreak = (summary['bestStreak'] as num?)?.toInt() ?? 0;
+    _activeDayStreak = (summary['activeDayStreak'] as num?)?.toInt() ?? 0;
+    _monthlyCompletionRate =
+        (summary['monthlyCompletionRate'] as num?)?.toDouble() ?? 0;
+    notifyListeners();
+  }
+
+  void recomputeSummaryFromHabits(List<Habit> habits) {
+    final goodHabits = habits.where((h) => !h.isBadHabit).toList();
+    if (goodHabits.isEmpty) {
+      _bestStreak = 0;
+      _activeDayStreak = 0;
+      _monthlyCompletionRate = 0;
+      notifyListeners();
+      return;
+    }
+
+    _bestStreak = goodHabits
+        .map((h) => h.longestStreak)
+        .reduce((a, b) => a > b ? a : b);
+
+    final dateCounts = <String, int>{};
+    for (final habit in goodHabits) {
+      for (final date in habit.completedDates) {
+        dateCounts[date] = (dateCounts[date] ?? 0) + 1;
+      }
+    }
+
+    var cursor = StreakUtils.todayKey;
+    if (!dateCounts.containsKey(cursor) || (dateCounts[cursor] ?? 0) <= 0) {
+      cursor = StreakUtils.addDays(cursor, -1);
+    }
+
+    var active = 0;
+    while ((dateCounts[cursor] ?? 0) > 0) {
+      active++;
+      cursor = StreakUtils.addDays(cursor, -1);
+    }
+    _activeDayStreak = active;
+
+    final allDates = <String>[];
+    for (final habit in goodHabits) {
+      allDates.addAll(habit.completedDates);
+    }
+    _monthlyCompletionRate = StreakUtils.monthlyCompletionRate(
+      completedDates: allDates,
+      totalGoodHabits: goodHabits.length,
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> syncFromHabits(List<Habit> habits) async {
+    final goodHabits = habits.where((h) => !h.isBadHabit).toList();
+    final total = goodHabits.length;
+    if (total == 0) return;
+
+    final counts = <String, int>{};
+    for (final habit in goodHabits) {
+      for (final date in habit.completedDates) {
+        counts[date] = (counts[date] ?? 0) + 1;
+      }
+    }
+
+    if (counts.isEmpty) return;
+
+    final days = counts.entries
+        .map(
+          (entry) => {
+            'date': entry.key,
+            'completedCount': entry.value,
+            'totalCount': total,
+          },
+        )
+        .toList();
+
+    await applyCalendarDays(days);
+    recomputeSummaryFromHabits(habits);
   }
 
   Future<void> recordDay({
@@ -71,17 +195,33 @@ class ProgressProvider extends ChangeNotifier {
         .toSet();
   }
 
-  double monthlyCompletionRate({DateTime? reference}) {
+  double monthlyCompletionRateFromRecords({DateTime? reference}) {
     final now = reference ?? DateTime.now();
     final monthRecords = _records.where(
       (r) => r.date.year == now.year && r.date.month == now.month,
     );
     if (monthRecords.isEmpty) return 0;
-    final total = monthRecords.fold<double>(
-      0,
-      (sum, r) => sum + r.completionRate,
-    );
-    return total / monthRecords.length;
+
+    final daysElapsed = now.day;
+    var totalCompleted = 0;
+    var totalPossible = 0;
+
+    for (final record in monthRecords) {
+      if (record.date.day <= daysElapsed) {
+        totalCompleted += record.completedCount;
+        totalPossible += record.totalCount;
+      }
+    }
+
+    if (totalPossible <= 0) {
+      final totalGood = monthRecords.isNotEmpty
+          ? monthRecords.first.totalCount
+          : 0;
+      if (totalGood <= 0) return 0;
+      return totalCompleted / (totalGood * daysElapsed);
+    }
+
+    return totalCompleted / totalPossible;
   }
 
   Future<void> seedSampleWeek({required int totalHabits}) async {

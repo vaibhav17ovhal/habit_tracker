@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../utils/streak_utils.dart';
+
 enum HabitFrequency { daily, weekly, monthly }
 
 enum HabitType { good, bad }
@@ -32,7 +34,10 @@ class Habit {
   final DateTime? startDate;
   final DateTime? endDate;
   int streak;
+  int longestStreak;
   bool isCompletedToday;
+  final List<String> completedDates;
+  final List<String> brokenDates;
 
   // Bad habit fields
   final double? baselineFrequency;
@@ -56,7 +61,10 @@ class Habit {
     this.startDate,
     this.endDate,
     this.streak = 0,
+    this.longestStreak = 0,
     this.isCompletedToday = false,
+    List<String>? completedDates,
+    List<String>? brokenDates,
     this.baselineFrequency,
     this.targetFrequency,
     this.goalType,
@@ -66,7 +74,9 @@ class Habit {
     this.todayLoggedCount = 0,
     List<Map<String, dynamic>>? frequencyLogs,
     this.daysOnTarget = 0,
-  }) : frequencyLogs = frequencyLogs ?? <Map<String, dynamic>>[];
+  })  : frequencyLogs = frequencyLogs ?? <Map<String, dynamic>>[],
+        completedDates = completedDates ?? <String>[],
+        brokenDates = brokenDates ?? <String>[];
 
   bool get isBadHabit => type == HabitType.bad;
 
@@ -84,7 +94,10 @@ class Habit {
     DateTime? startDate,
     DateTime? endDate,
     int? streak,
+    int? longestStreak,
     bool? isCompletedToday,
+    List<String>? completedDates,
+    List<String>? brokenDates,
     double? baselineFrequency,
     double? targetFrequency,
     BadHabitGoalType? goalType,
@@ -106,7 +119,10 @@ class Habit {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       streak: streak ?? this.streak,
+      longestStreak: longestStreak ?? this.longestStreak,
       isCompletedToday: isCompletedToday ?? this.isCompletedToday,
+      completedDates: completedDates ?? List<String>.from(this.completedDates),
+      brokenDates: brokenDates ?? List<String>.from(this.brokenDates),
       baselineFrequency: baselineFrequency ?? this.baselineFrequency,
       targetFrequency: targetFrequency ?? this.targetFrequency,
       goalType: goalType ?? this.goalType,
@@ -130,7 +146,10 @@ class Habit {
         'startDate': startDate?.toIso8601String(),
         'endDate': endDate?.toIso8601String(),
         'streak': streak,
+        'longestStreak': longestStreak,
         'isCompletedToday': isCompletedToday,
+        'completedDates': completedDates,
+        'brokenDates': brokenDates,
         'baselineFrequency': baselineFrequency,
         'targetFrequency': targetFrequency,
         'goalType': goalType?.index,
@@ -143,7 +162,7 @@ class Habit {
       };
 
   factory Habit.fromMap(Map<dynamic, dynamic> map) {
-    return Habit(
+    final habit = Habit(
       id: map['id'] as String,
       name: map['name'] as String,
       iconPath: map['iconPath'] as String,
@@ -158,7 +177,16 @@ class Habit {
           ? DateTime.parse(map['endDate'] as String)
           : null,
       streak: map['streak'] as int? ?? 0,
+      longestStreak: map['longestStreak'] as int? ?? 0,
       isCompletedToday: map['isCompletedToday'] as bool? ?? false,
+      completedDates: (map['completedDates'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          <String>[],
+      brokenDates: (map['brokenDates'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          <String>[],
       baselineFrequency: (map['baselineFrequency'] as num?)?.toDouble(),
       targetFrequency: (map['targetFrequency'] as num?)?.toDouble(),
       goalType: map['goalType'] != null
@@ -174,6 +202,12 @@ class Habit {
           <Map<String, dynamic>>[],
       daysOnTarget: map['daysOnTarget'] as int? ?? 0,
     );
+
+    if (!habit.isBadHabit) {
+      habit.refreshStreakFields();
+    }
+
+    return habit;
   }
 
   Map<String, dynamic> toApiMap() {
@@ -270,8 +304,12 @@ class Habit {
     final completedDates =
         (map['completedDates'] as List?)?.map((e) => e.toString()).toList() ??
             [];
-    final todayKey = _todayDateKey();
+    final todayKey = StreakUtils.todayKey;
     final isCompletedToday = completedDates.contains(todayKey);
+    final streak = (map['streak'] as num?)?.toInt() ??
+        StreakUtils.currentStreak(completedDates, referenceToday: todayKey);
+    final longestStreak = (map['longestStreak'] as num?)?.toInt() ??
+        StreakUtils.longestStreak(completedDates);
 
     final brokenDates =
         (map['brokenDates'] as List?)?.map((e) => e.toString()).toList() ?? [];
@@ -286,8 +324,11 @@ class Habit {
       reminderTime: reminderTime ?? meta['reminderTime'] as String?,
       startDate: parseDate(meta['startDate']),
       endDate: parseDate(meta['endDate']),
-      streak: (map['streak'] as num?)?.toInt() ?? 0,
+      streak: streak,
+      longestStreak: longestStreak,
       isCompletedToday: isCompletedToday,
+      completedDates: completedDates,
+      brokenDates: brokenDates,
       baselineFrequency: (meta['baselineFrequency'] as num?)?.toDouble(),
       targetFrequency: (meta['targetFrequency'] as num?)?.toDouble(),
       goalType: parseGoalType(meta['goalType']),
@@ -305,10 +346,9 @@ class Habit {
     );
   }
 
-  static String _todayDateKey() {
-    final now = DateTime.now();
-    return '${now.year.toString().padLeft(4, '0')}-'
-        '${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')}';
+  void refreshStreakFields() {
+    streak = StreakUtils.currentStreak(completedDates);
+    longestStreak = StreakUtils.longestStreak(completedDates);
+    isCompletedToday = completedDates.contains(StreakUtils.todayKey);
   }
 }

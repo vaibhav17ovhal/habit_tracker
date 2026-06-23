@@ -75,4 +75,38 @@ class ApiUrls {
   static String get profileUrl => url(profile);
 
   static String get profileSetupUrl => url(profileSetup);
+
+  // ── Progress ──────────────────────────────────────────────────────────────
+
+  static const String progressCalendar = '/progress/calendar';
+
+  static String progressCalendarPath({
+    int? year,
+    int? month,
+    String? today,
+  }) {
+    final params = <String>[];
+    if (year != null) params.add('year=$year');
+    if (month != null) params.add('month=$month');
+    if (today != null && today.isNotEmpty) params.add('today=$today');
+    if (params.isEmpty) return progressCalendar;
+    return '$progressCalendar?${params.join('&')}';
+  }
+
+  static String progressCalendarUrl({
+    int? year,
+    int? month,
+    String? today,
+  }) =>
+      url(progressCalendarPath(year: year, month: month, today: today));
+
+  static const String progressSummary = '/progress/summary';
+
+  static String progressSummaryPath({String? today}) {
+    if (today == null || today.isEmpty) return progressSummary;
+    return '$progressSummary?today=$today';
+  }
+
+  static String progressSummaryUrl({String? today}) =>
+      url(progressSummaryPath(today: today));
 }

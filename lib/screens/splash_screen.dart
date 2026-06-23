@@ -127,22 +127,26 @@ class _SplashScreenState extends State<SplashScreen>
     if (await userProvider.hasValidSession()) {
       try {
         await habitsProvider.fetchFromApi();
+        await habitsProvider.syncProgress(progressProvider);
       } catch (_) {
         await habitsProvider.loadFromStorage();
+        await progressProvider.syncFromHabits(habitsProvider.goodHabits);
       }
     } else {
       await habitsProvider.loadFromStorage();
-    }
-
-    if (habitsProvider.totalCount > 0) {
-      await progressProvider.seedSampleWeek(
-        totalHabits: habitsProvider.totalCount,
-      );
-      await progressProvider.recordDay(
-        date: DateTime.now(),
-        completedCount: habitsProvider.completedCount,
-        totalCount: habitsProvider.totalCount,
-      );
+      if (habitsProvider.totalCount > 0) {
+        await progressProvider.syncFromHabits(habitsProvider.goodHabits);
+        if (progressProvider.records.isEmpty) {
+          await progressProvider.seedSampleWeek(
+            totalHabits: habitsProvider.totalCount,
+          );
+        }
+        await progressProvider.recordDay(
+          date: DateTime.now(),
+          completedCount: habitsProvider.completedCount,
+          totalCount: habitsProvider.totalCount,
+        );
+      }
     }
 
     if (!mounted) return;

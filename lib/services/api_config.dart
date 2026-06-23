@@ -22,7 +22,7 @@ class ApiConfig {
 
   /// PC Wi‑Fi IPv4 — used when [androidMode] is [ApiDeviceMode.physicalDevice].
   /// Run `ipconfig` on Windows to find yours.
-  static const String pcLanHost = '192.168.1.10';
+  static const String pcLanHost = '192.168.1.9';
 
   static const Duration requestTimeout = Duration(seconds: 30);
 
